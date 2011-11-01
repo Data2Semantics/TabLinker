@@ -13,7 +13,7 @@ from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, URIRef, XSD,
 import re
 from ConfigParser import SafeConfigParser
 
-#set default encoding to latin-1, to avoid encode/decode errors for chars such as ë.
+#set default encoding to latin-1, to avoid encode/decode errors for special chars
 #(laurens: actually don't know why encoding/decoding is not sufficient)
 import sys
 reload(sys)
@@ -351,7 +351,7 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
 if __name__ == '__main__':
     # Open census data files
     fileFound = False
-    for filename in glob.glob(config.get('paths', 'tablinkerDropboxFolder') + 'marked/*_marked.xls') :
+    for filename in glob.glob(config.get('paths', 'srcFolder') + '*_marked.xls') :
         fileFound = True
         rb = open_workbook(filename, formatting_info=True)
         
@@ -371,10 +371,10 @@ if __name__ == '__main__':
 
         
         print "Serializing graph to file {}.ttl".format(scope)
-        graph.serialize(scope+'.ttl', format='turtle')
+        graph.serialize(config.get('paths', 'trgtFolder') + scope+'.ttl', format='turtle')
     
     if fileFound :
         print "Done"
     else :
         print "No files found. Path with location of marked xls files ok?"
-        print "Path searched in: " + config.get('paths', 'tablinkerDropboxFolder')
+        print "Path searched in: " + config.get('paths', 'srcFolder')
