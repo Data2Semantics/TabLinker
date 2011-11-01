@@ -13,6 +13,14 @@ from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, URIRef, XSD,
 import re
 
 
+DCTERMS = Namespace('http://purl.org/dc/terms/')
+SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
+D2S = Namespace('http://www.data2semantics.org/core/')
+QB = Namespace('http://purl.org/linked-data/cube#')
+OWL = Namespace('http://www.w3.org/2002/07/owl#')
+dropboxTablinkerPath = '/home/lrd900/Documents/Dropbox/Data2Semantics/DANS-Usecase/tablinker/'
+xlsPattern = dropboxTablinkerPath + 'marked/*_marked.xls'
+
 def initGraph(scope):
     CENSUS = Namespace('http://www.data2semantics.org/data/'+scope+'/')
 	
@@ -115,9 +123,6 @@ def addValue(graph, sheet_qname, source_cell_qname, source_cell_value, label=Non
     
 
 def parse(r_sheet, w_sheet, graph, CENSUS):
-
-    
-    
     colns = number_of_good_cols(r_sheet)
     rowns = number_of_good_rows(r_sheet)
     
@@ -321,21 +326,12 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
                     
     return graph
         
-
-
-DCTERMS = Namespace('http://purl.org/dc/terms/')
-SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
-D2S = Namespace('http://www.data2semantics.org/core/')
-QB = Namespace('http://purl.org/linked-data/cube#')
-OWL = Namespace('http://www.w3.org/2002/07/owl#')
-
     
 if __name__ == '__main__':
     # Open census data files
-
-    
-
-    for filename in glob.glob('../marked/*_marked.xls') :
+    fileFound = False
+    for filename in glob.glob(xlsPattern) :
+        fileFound = True
         rb = open_workbook(filename, formatting_info=True)
         
         scope = re.search('.*/(.*?)\.xls',filename).group(1)
@@ -347,18 +343,20 @@ if __name__ == '__main__':
         
         for n in range(rb.nsheets) :
             r_sheet = rb.sheet_by_index(n)
-            
             w_sheet = wb.get_sheet(n)
-            
             graph = parse(r_sheet, w_sheet, graph, CENSUS)
                 
 
         
         print "Serializing graph to file {}.ttl".format(scope)
         graph.serialize(scope+'.ttl', format='turtle')
+    
+    if fileFound :
         print "Done"
-        
-#        wb.save(filename+'_converted.xls')
+    else :
+        print "No files found. Path with location of marked xls files ok?"
+        print "Pattern for marked xls files is currently: " + xlsPattern
+ 
     
         
     
