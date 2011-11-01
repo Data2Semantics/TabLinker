@@ -1,8 +1,8 @@
-'''
+"""
 Created on 19 Sep 2011
 
 @author: hoekstra
-'''
+"""
 from xlutils.margins import number_of_good_cols, number_of_good_rows
 from xlutils.copy import copy
 from xlutils.styles import Styles
@@ -13,6 +13,12 @@ from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, URIRef, XSD,
 import re
 from ConfigParser import SafeConfigParser
 
+#set default encoding to latin-1, to avoid encode/decode errors for chars such as ë.
+#(laurens: actually don't know why encoding/decoding is not sufficient)
+import sys
+reload(sys)
+sys.setdefaultencoding("latin-1")
+
 config = SafeConfigParser()
 config.read('config.ini')
 DCTERMS = Namespace('http://purl.org/dc/terms/')
@@ -21,7 +27,17 @@ D2S = Namespace('http://www.data2semantics.org/core/')
 QB = Namespace('http://purl.org/linked-data/cube#')
 OWL = Namespace('http://www.w3.org/2002/07/owl#')
 
+
 def initGraph(scope):
+    """Initialize graph
+
+    Keyword arguments:
+    string -- Scope to init graph for 
+    
+    Returns:
+    ConjunctiveGraph
+    Namespace -- Namespace for given scope
+    """
     CENSUS = Namespace('http://www.data2semantics.org/data/'+scope+'/')
 	
     graph = ConjunctiveGraph()
@@ -46,6 +62,14 @@ def initGraph(scope):
     return graph, CENSUS
     
 def getType(style):
+    """Get type for a given excel style. Style must be prefixed by D2S
+
+    Keyword arguments:
+    string -- Style to check type for
+    
+    Returns:
+    String -- The type of this field. In case none is found, 'unknown'
+    """
     typematch = re.search('D2S\s(.*)',style)
     if typematch :
         type = typematch.group(1)
@@ -63,31 +87,39 @@ def isEmptyRow(i,colns):
     for j in range(0,colns) :
         if not isEmpty(i,j):
             return False
-        
     return True
 
 def isEmptyColumn(j,rowns):
     for i in range(0,rowns) :
         if not isEmpty(i,j):
             return False
-        
     return True
 
 
-### FIX THIS, CODE DOES NOT WORK. PARSE ROW HIERARCHY
 def getQName(names = {}):
+    """
+    Keyword arguments:
+    mixed -- Either dict of names or string of a name.
+    
+    Returns:
+    ConjunctiveGraph
+    Namespace -- Namespace for given scope
+    """
+    
     qname = re.sub('\s','_',r_sheet.name)
     
     if type(names) == dict :
         for k in names :
-            n = unicode(names[k])
-            qname = qname + '/' + re.sub('\s|\.|\(|\)|,|:|;|\[|\]','_',n.strip()).encode('utf-8')
+            qname = qname + '/' + encodeString(names[k])
         return qname
     else :
-        n = unicode(names)
-        return qname + '/' + re.sub('\s|\.|\(|\)|,|:|;|\[|\]','_',n.strip()).encode('utf-8')
+        return qname + '/' + encodeString(names)
     
-
+def encodeString(string):
+    string = unicode(string)
+    string = re.sub('\s|\.|\(|\)|,|:|;|\[|\]','_',string.strip()).encode('utf-8', 'ignore')
+    return string
+    
 
 def getLeftWithValue(i,j,type):
     # Get value of first cell to the left of type 'type' that's not empty.
@@ -99,7 +131,7 @@ def getLeftWithValue(i,j,type):
     
     if isEmpty(i,j-1) :
         return getLeftWithValue(i, j-1, type)
-    elif getType(s[left].name) == type :
+    elif getType(styles[left].name) == type :
         return left, left_name
     else :
         return getLeftWithValue(i, j-1, type)
@@ -118,8 +150,6 @@ def addValue(graph, sheet_qname, source_cell_qname, source_cell_value, label=Non
     graph.add((CENSUS[source_cell_qname],D2S['value'],CENSUS[source_cell_value_qname]))
     
     return graph, source_cell_value_qname
-
-
     
 
 def parse(r_sheet, w_sheet, graph, CENSUS):
@@ -147,16 +177,12 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
         rowhierarchy[i] = {}
         
         for j in range(0, colns):
-            
-            
             source_cell = r_sheet.cell(i,j)
             source_cell_name = cellname(i,j)
-            
-            
-            style = s[source_cell].name
-            
+            style = styles[source_cell].name
             type = getType(style)
-            
+            #source_cell.value = encodeString(source_cell.value)
+ 
             print "{} ({},{})/{}: \"{}\"".format(type, i,j, source_cell_name, source_cell.value)
             
             # ===
@@ -247,7 +273,6 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
                     try :
                         properties = []
                         for dim_qname in dimcol[j] :
-#                            print "Adding property", dim_qname
                             properties.append(dim_qname)
                     except KeyError :
                         print "No row dimension for value in cell!"
@@ -259,19 +284,15 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
                         dimrow[i].append((source_cell_value_qname,properties))
                     
                 elif type == 'HierarchicalRowHeader' :
-                    
                     # Use the rowhierarchy to create a unique qname for the cell's contents, give the source_cell's original value as extra argument
                     print "Row hierarchy for row {}: ".format(i), rowhierarchy[i]
                     graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, rowhierarchy[i], label=source_cell.value)
                     
                     graph.add((CENSUS[source_cell_value_qname], RDFS.comment, Literal('Copied value, original: '+ source_cell.value, 'nl')))
-                    
                         
                     # Now that we know the source cell's value qname, add a link.
                     graph.add((CENSUS[source_cell_qname], D2S['isDimension'], CENSUS[source_cell_value_qname]))
                     
-#                    print "Get parent"
-## HIER GAAT HET MIS!
                     hierarchy_items = rowhierarchy[i].items()
                     try: 
                         parent_values = dict(hierarchy_items[:-1])
@@ -337,7 +358,8 @@ if __name__ == '__main__':
         scope = re.search('.*/(.*?)\.xls',filename).group(1)
         graph, CENSUS = initGraph(scope)
         
-        s = Styles(rb)
+        #Get styles from xls file
+        styles = Styles(rb)
         
         wb = copy(rb)
         
@@ -355,4 +377,4 @@ if __name__ == '__main__':
         print "Done"
     else :
         print "No files found. Path with location of marked xls files ok?"
-        print "Pattern for marked xls files is currently: " + xlsPattern
+        print "Path searched in: " + config.get('paths', 'tablinkerDropboxFolder')
