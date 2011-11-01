@@ -11,15 +11,15 @@ from xlwt import easyxf
 import glob
 from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, URIRef, XSD, BNode
 import re
+from ConfigParser import SafeConfigParser
 
-
+config = SafeConfigParser()
+config.read('config.ini')
 DCTERMS = Namespace('http://purl.org/dc/terms/')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
 D2S = Namespace('http://www.data2semantics.org/core/')
 QB = Namespace('http://purl.org/linked-data/cube#')
 OWL = Namespace('http://www.w3.org/2002/07/owl#')
-dropboxTablinkerPath = '/home/lrd900/Documents/Dropbox/Data2Semantics/DANS-Usecase/tablinker/'
-xlsPattern = dropboxTablinkerPath + 'marked/*_marked.xls'
 
 def initGraph(scope):
     CENSUS = Namespace('http://www.data2semantics.org/data/'+scope+'/')
@@ -330,7 +330,7 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
 if __name__ == '__main__':
     # Open census data files
     fileFound = False
-    for filename in glob.glob(xlsPattern) :
+    for filename in glob.glob(config.get('paths', 'tablinkerDropboxFolder') + 'marked/*_marked.xls') :
         fileFound = True
         rb = open_workbook(filename, formatting_info=True)
         
@@ -356,9 +356,3 @@ if __name__ == '__main__':
     else :
         print "No files found. Path with location of marked xls files ok?"
         print "Pattern for marked xls files is currently: " + xlsPattern
- 
-    
-        
-    
-    
-    
