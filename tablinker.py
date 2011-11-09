@@ -152,6 +152,18 @@ def addValue(graph, sheet_qname, source_cell_qname, source_cell_value, label=Non
     return graph, source_cell_value_qname
 
 def debug(i, j, msg) :
+    """
+    If verbose debug level is enabled, then a debug statement is printed. 
+    Row/col numbers are translated into excel cellnames
+    
+    Keyword arguments:
+    int i -- row number
+    int j -- col number
+    string msg -- Msg to display
+    
+    Returns:
+    New row hierarchy dictionary
+    """
     if (config.getboolean('debug', 'verbose')) :
         print cellname(i,j) + ": " + msg
 
@@ -200,15 +212,7 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
                     graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
 
                 elif type == 'Property' :
-                    if not isEmpty(i,j) :
-                        graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-                    else :
-                        left, left_name = getLeftWithValue(i,j,type='Property')
-                        if left :
-                            graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, left.value)
-                        else :
-                            graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-                        
+                    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
                     graph.add((CENSUS[source_cell_qname],D2S['isDimensionProperty'],CENSUS[source_cell_value_qname]))
                     graph.add((CENSUS[source_cell_value_qname],RDF.type,QB['DimensionProperty']))
                     graph.add((CENSUS[source_cell_value_qname],RDF.type,RDF['Property']))
@@ -220,15 +224,7 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
                         dimcol[j].append(source_cell_value_qname)     
                                        
                 elif type == 'Header' :
-                    if not isEmpty(i,j) :
-                        graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-                    else :
-                        left, left_name = getLeftWithValue(i,j,type='Header')
-                        if left :
-                            graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, left.value)
-                        else :
-                            graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-                        
+                    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)   
                     graph.add((CENSUS[source_cell_qname],D2S['isDimension'],CENSUS[source_cell_value_qname]))
                     graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
                         
@@ -278,8 +274,6 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
                     except :
                         debug(i,j, "Top of hierarchy")
                  
-                        
-                        
                     # Get the properties to use for the row headers
                     try :
                         properties = []
@@ -314,9 +308,6 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
                             graph.add((observation,D2S['dimension'],CENSUS[dim_qname]))
                     except KeyError :
                         debug(i,j, "No row dimension for cell")
-                
-               
-                    
                     
     return graph
 
