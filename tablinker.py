@@ -178,6 +178,12 @@ def getValidRowsCols(sheet) :
         colns = colns - 1
     return rowns, colns
 
+def appendItemInDict(dictionary, key, value) :
+    if key not in dictionary : 
+        dictionary[key] = []
+    dictionary[key].append(value)
+    return dictionary
+
 def parse(r_sheet, w_sheet, graph, CENSUS):
     rowns, colns = getValidRowsCols(r_sheet)
     print "Parsing " + str(rowns) + " rows and " + str(colns) + " cols"
@@ -199,7 +205,7 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
             debug(i,j,"{}/{}: \"{}\"".format(type, source_cell_name, source_cell.value))
             
             if (type == 'HierarchicalRowHeader') :
-                rowhierarchy = parseHierarchicalRowHeader(i, j, rowhierarchy)
+                rowhierarchy = updateHierchicalHeaderList(i, j, rowhierarchy)
             
             if not isEmpty(i,j) :
                 source_cell_qname = getQName(source_cell_name) 
@@ -207,112 +213,141 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
                 graph.add((CENSUS[source_cell_qname],RDF.type,D2S[type]))
                 
                 if type == 'Title' :
-                    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-                    graph.add((CENSUS[sheet_qname], D2S['title'], CENSUS[source_cell_value_qname]))
-                    graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
+                    graph = parseTitle(i, j, graph)
 
                 elif type == 'Property' :
-                    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-                    graph.add((CENSUS[source_cell_qname],D2S['isDimensionProperty'],CENSUS[source_cell_value_qname]))
-                    graph.add((CENSUS[source_cell_value_qname],RDF.type,QB['DimensionProperty']))
-                    graph.add((CENSUS[source_cell_value_qname],RDF.type,RDF['Property']))
-                        
-                    if j in dimcol :
-                        dimcol[j].append(source_cell_value_qname)
-                    else :
-                        dimcol[j] = []
-                        dimcol[j].append(source_cell_value_qname)     
+                    graph, dimcol = parseProperty(i, j, graph, dimcol)
                                        
                 elif type == 'Header' :
-                    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)   
-                    graph.add((CENSUS[source_cell_qname],D2S['isDimension'],CENSUS[source_cell_value_qname]))
-                    graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
-                        
-                    if j in dimcol :
-                        dimcol[j].append(source_cell_value_qname)
-                    else :
-                        dimcol[j] = []
-                        dimcol[j].append(source_cell_value_qname)
-                    
+                    graph, dimcol = parseHeader(i, j, graph, dimcol)
+                   
                 elif type == 'RowHeader' :
-                    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-                    graph.add((CENSUS[source_cell_qname],D2S['isDimension'],CENSUS[source_cell_value_qname]))
-                    graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
-
-                    
-                    # Get the properties to use for the row headers
-                    try :
-                        properties = []
-                        for dim_qname in dimcol[j] :
-                            properties.append(dim_qname)
-                    except KeyError :
-                        debug(i,j, "No row dimension for cell")
-                    
-                    if i in dimrow :
-                        dimrow[i].append((source_cell_value_qname,properties))
-                    else :
-                        dimrow[i] = []
-                        dimrow[i].append((source_cell_value_qname,properties))
+                    graph, dimrow = parseRowHeader(i, j, graph, dimrow, dimcol)
                     
                 elif type == 'HierarchicalRowHeader' :
-                    # Use the rowhierarchy to create a unique qname for the cell's contents, give the source_cell's original value as extra argument
-                    debug(i,j,"Row hierarchy " + str(rowhierarchy[i]))
-                    
-                    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, rowhierarchy[i], label=source_cell.value)
-                    
-                    graph.add((CENSUS[source_cell_value_qname], RDFS.comment, Literal('Copied value, original: '+ source_cell.value, 'nl')))
-                        
-                    # Now that we know the source cell's value qname, add a link.
-                    graph.add((CENSUS[source_cell_qname], D2S['isDimension'], CENSUS[source_cell_value_qname]))
-                    
-                    hierarchy_items = rowhierarchy[i].items()
-                    try: 
-                        parent_values = dict(hierarchy_items[:-1])
-                        debug(i,j, "Parent value: " + str(parent_values))
-                        parent_value_qname = getQName(parent_values)
-                        graph.add((CENSUS[source_cell_value_qname], SKOS['broader'], CENSUS[parent_value_qname]))
-                    except :
-                        debug(i,j, "Top of hierarchy")
-                 
-                    # Get the properties to use for the row headers
-                    try :
-                        properties = []
-                        for dim_qname in dimcol[j] :
-                            properties.append(dim_qname)
-                    except KeyError :
-                        debug(i,j, "No row dimension for cell")
-                    
-                    if i in dimrow :
-                        dimrow[i].append((source_cell_value_qname,properties))
-                    else :
-                        dimrow[i] = []
-                        dimrow[i].append((source_cell_value_qname,properties))
+                    graph, dimrow = parseHierarchicalRowHeader(i, j, graph, dimrow, dimcol, rowhierarchy)
                     
                 elif type == 'Data' :
-                    observation = BNode()
-                    
-                    graph.add((CENSUS[source_cell_qname],D2S['isObservation'], observation))
-                    graph.add((observation,RDF.type,QB['Observation']))
-                    graph.add((observation,QB['dataSet'],CENSUS[sheet_qname]))
-                    graph.add((observation,D2S['populationSize'],Literal(source_cell.value)))
-                    
-                    try :
-                        for (dim_qname, properties) in dimrow[i] :
-                            for p in properties:
-                                graph.add((observation,D2S[p],CENSUS[dim_qname]))
-                    except KeyError :
-                        debug(i,j, "No row dimension for cell")
-                        
-                    try :
-                        for dim_qname in dimcol[j] :
-                            graph.add((observation,D2S['dimension'],CENSUS[dim_qname]))
-                    except KeyError :
-                        debug(i,j, "No row dimension for cell")
-                    
+                    graph = parseData(i, j, graph, dimrow, dimcol)
     return graph
 
+def parseHierarchicalRowHeader(i, j, graph, dimrow, dimcol, rowhierarchy) :
+    source_cell = r_sheet.cell(i,j)
+    source_cell_name = cellname(i,j)
+    source_cell_qname = getQName(source_cell_name) 
+    sheet_qname = getQName()
+    
+    # Use the rowhierarchy to create a unique qname for the cell's contents, give the source_cell's original value as extra argument
+    debug(i,j,"Row hierarchy " + str(rowhierarchy[i]))
+    
+    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, rowhierarchy[i], label=source_cell.value)
+    
+    graph.add((CENSUS[source_cell_value_qname], RDFS.comment, Literal('Copied value, original: '+ source_cell.value, 'nl')))
+        
+    # Now that we know the source cell's value qname, add a link.
+    graph.add((CENSUS[source_cell_qname], D2S['isDimension'], CENSUS[source_cell_value_qname]))
+    
+    hierarchy_items = rowhierarchy[i].items()
+    try: 
+        parent_values = dict(hierarchy_items[:-1])
+        debug(i,j, "Parent value: " + str(parent_values))
+        parent_value_qname = getQName(parent_values)
+        graph.add((CENSUS[source_cell_value_qname], SKOS['broader'], CENSUS[parent_value_qname]))
+    except :
+        debug(i,j, "Top of hierarchy")
+ 
+    # Get the properties to use for the row headers
+    try :
+        properties = []
+        for dim_qname in dimcol[j] :
+            properties.append(dim_qname)
+    except KeyError :
+        debug(i,j, "No row dimension for cell")
+    dimrow = appendItemInDict(dimrow, i, (source_cell_value_qname, properties))
+    return graph, dimrow
 
-def parseHierarchicalRowHeader(i, j, rowhierarchy) :
+def parseRowHeader(i, j, graph, dimrow, dimcol) :
+    source_cell = r_sheet.cell(i,j)
+    source_cell_name = cellname(i,j)
+    source_cell_qname = getQName(source_cell_name) 
+    sheet_qname = getQName()
+    
+    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
+    graph.add((CENSUS[source_cell_qname],D2S['isDimension'],CENSUS[source_cell_value_qname]))
+    graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
+    # Get the properties to use for the row headers
+    try :
+        properties = []
+        for dim_qname in dimcol[j] :
+            properties.append(dim_qname)
+    except KeyError :
+        debug(i,j, "No row dimension for cell")
+    dimrow = appendItemInDict(dimrow, i, (source_cell_value_qname, properties))
+    return graph, dimrow
+
+def parseHeader(i, j, graph, dimcol) :
+    source_cell = r_sheet.cell(i,j)
+    source_cell_name = cellname(i,j)
+    source_cell_qname = getQName(source_cell_name) 
+    sheet_qname = getQName()
+    
+    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)   
+    graph.add((CENSUS[source_cell_qname],D2S['isDimension'],CENSUS[source_cell_value_qname]))
+    graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
+    dimcol = appendItemInDict(dimcol, j, source_cell_value_qname)
+    return graph, dimcol
+
+def parseProperty(i, j, graph, dimcol) :
+    source_cell = r_sheet.cell(i,j)
+    source_cell_name = cellname(i,j)
+    source_cell_qname = getQName(source_cell_name) 
+    sheet_qname = getQName()
+    
+    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
+    graph.add((CENSUS[source_cell_qname],D2S['isDimensionProperty'],CENSUS[source_cell_value_qname]))
+    graph.add((CENSUS[source_cell_value_qname],RDF.type,QB['DimensionProperty']))
+    graph.add((CENSUS[source_cell_value_qname],RDF.type,RDF['Property']))
+    dimcol = appendItemInDict(dimcol, j, source_cell_value_qname)  
+    return graph, dimcol
+
+def parseTitle(i, j, graph) :
+    source_cell = r_sheet.cell(i,j)
+    source_cell_name = cellname(i,j)
+    source_cell_qname = getQName(source_cell_name) 
+    sheet_qname = getQName()
+    
+    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
+    graph.add((CENSUS[sheet_qname], D2S['title'], CENSUS[source_cell_value_qname]))
+    graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
+    
+def parseData(i,j,graph, dimrow, dimcol) :
+    source_cell = r_sheet.cell(i,j)
+    source_cell_name = cellname(i,j)
+    source_cell_qname = getQName(source_cell_name) 
+    sheet_qname = getQName()
+    observation = BNode()
+    
+    graph.add((CENSUS[source_cell_qname],D2S['isObservation'], observation))
+    graph.add((observation,RDF.type,QB['Observation']))
+    graph.add((observation,QB['dataSet'],CENSUS[sheet_qname]))
+    graph.add((observation,D2S['populationSize'],Literal(source_cell.value)))
+    
+    try :
+        for (dim_qname, properties) in dimrow[i] :
+            for p in properties:
+                graph.add((observation,D2S[p],CENSUS[dim_qname]))
+    except KeyError :
+        debug(i,j, "No row dimension for cell")
+        
+    try :
+        for dim_qname in dimcol[j] :
+            graph.add((observation,D2S['dimension'],CENSUS[dim_qname]))
+    except KeyError :
+        debug(i,j, "No row dimension for cell")
+    return graph
+    
+
+def updateHierchicalHeaderList(i, j, rowhierarchy) :
     """
     Build up lists for hierarchical row headers
     
