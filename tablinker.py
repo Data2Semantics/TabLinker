@@ -6,10 +6,9 @@ Created on 19 Sep 2011
 from xlutils.margins import number_of_good_cols, number_of_good_rows
 from xlutils.copy import copy
 from xlutils.styles import Styles
-from xlrd import open_workbook, XL_CELL_TEXT, XL_CELL_EMPTY, XL_CELL_BLANK, cellnameabs, cellname
-from xlwt import easyxf
+from xlrd import open_workbook, XL_CELL_EMPTY, XL_CELL_BLANK, cellname
 import glob
-from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, URIRef, XSD, BNode
+from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, XSD, BNode
 import re
 from ConfigParser import SafeConfigParser
 
@@ -17,11 +16,11 @@ from ConfigParser import SafeConfigParser
 #(laurens: actually don't know why encoding/decoding is not sufficient)
 import sys
 reload(sys)
-sys.setdefaultencoding("latin-1")
+sys.setdefaultencoding("latin-1") #@UndefinedVariable
 
 config = SafeConfigParser()
 config.read('config.ini')
-DCTERMS = Namespace('http://purl.org/dc/terms/')
+DCTERMS = Namespace('http:/g/purl.org/dc/terms/')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
 D2S = Namespace('http://www.data2semantics.org/core/')
 QB = Namespace('http://purl.org/linked-data/cube#')
@@ -39,7 +38,7 @@ def initGraph(scope):
     Namespace -- Namespace for given scope
     """
     CENSUS = Namespace('http://www.data2semantics.org/data/'+scope+'/')
-	
+
     graph = ConjunctiveGraph()
 
     # Bind namespaces to graph
@@ -72,10 +71,10 @@ def getType(style):
     """
     typematch = re.search('D2S\s(.*)',style)
     if typematch :
-        type = typematch.group(1)
+        cellType = typematch.group(1)
     else :
-        type = 'Unknown'
-    return type
+        cellType = 'Unknown'
+    return cellType
 
 def isEmpty(i,j):
     if (r_sheet.cell(i,j).ctype == XL_CELL_EMPTY or r_sheet.cell(i,j).ctype == XL_CELL_BLANK) or r_sheet.cell(i,j).value == '' :
@@ -121,7 +120,7 @@ def encodeString(string):
     return string
     
 
-def getLeftWithValue(i,j,type):
+def getLeftWithValue(i,j,cellType):
     # Get value of first cell to the left of type 'type' that's not empty.
     if j == 0:
         return None, None
@@ -130,11 +129,11 @@ def getLeftWithValue(i,j,type):
     left_name = cellname(i,j-1)
     
     if isEmpty(i,j-1) :
-        return getLeftWithValue(i, j-1, type)
-    elif getType(styles[left].name) == type :
+        return getLeftWithValue(i, j-1, cellType)
+    elif getType(styles[left].name) == cellType :
         return left, left_name
     else :
-        return getLeftWithValue(i, j-1, type)
+        return getLeftWithValue(i, j-1, cellType)
         
 
 
@@ -188,7 +187,6 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
     rowns, colns = getValidRowsCols(r_sheet)
     print "Parsing " + str(rowns) + " rows and " + str(colns) + " cols"
     
-    sheet_qname = getQName()
     
     dimcol = {}
     dimrow = {}
@@ -200,11 +198,11 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
             source_cell = r_sheet.cell(i,j)
             source_cell_name = cellname(i,j)
             style = styles[source_cell].name
-            type = getType(style)
+            cellType = getType(style)
  
-            debug(i,j,"{}/{}: \"{}\"".format(type, source_cell_name, source_cell.value))
+            debug(i,j,"{}/{}: \"{}\"".format(cellType, source_cell_name, source_cell.value))
             
-            if (type == 'HierarchicalRowHeader') :
+            if (cellType == 'HierarchicalRowHeader') :
                 #Always update headerlist, and always parse hierarchical row header, even if it doesnt contain data
                 rowhierarchy = updateHierchicalHeaderList(i, j, rowhierarchy)
                 graph, dimrow = parseHierarchicalRowHeader(i, j, graph, dimrow, dimcol, rowhierarchy)
@@ -212,21 +210,21 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
             if not isEmpty(i,j) :
                 source_cell_qname = getQName(source_cell_name) 
                 
-                graph.add((CENSUS[source_cell_qname],RDF.type,D2S[type]))
+                graph.add((CENSUS[source_cell_qname],RDF.type,D2S[cellType]))
                 
-                if type == 'Title' :
+                if cellType == 'Title' :
                     graph = parseTitle(i, j, graph)
 
-                elif type == 'Property' :
+                elif cellType == 'Property' :
                     graph, dimcol = parseProperty(i, j, graph, dimcol)
                                        
-                elif type == 'Header' :
+                elif cellType == 'Header' :
                     graph, dimcol = parseHeader(i, j, graph, dimcol)
                    
-                elif type == 'RowHeader' :
+                elif cellType == 'RowHeader' :
                     graph, dimrow = parseRowHeader(i, j, graph, dimrow, dimcol)
                     
-                elif type == 'Data' :
+                elif cellType == 'Data' :
                     graph = parseData(i, j, graph, dimrow, dimcol)
     return graph
 
@@ -276,7 +274,6 @@ def updateHierchicalHeaderList(i, j, rowhierarchy) :
     New row hierarchy dictionary
     """
     source_cell = r_sheet.cell(i,j)
-    source_cell_name = cellname(i,j)
     if (isEmpty(i,j) or str(source_cell.value).lower().strip() == 'id.') :
         # If the cell is empty, and a HierarchicalRowHeader, add the value of the row header above it.
         # If the cell is exactly 'id.', add the value of the row header above it. 
