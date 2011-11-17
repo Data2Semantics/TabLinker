@@ -205,7 +205,9 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
             debug(i,j,"{}/{}: \"{}\"".format(type, source_cell_name, source_cell.value))
             
             if (type == 'HierarchicalRowHeader') :
+                #Always update headerlist, and always parse hierarchical row header, even if it doesnt contain data
                 rowhierarchy = updateHierchicalHeaderList(i, j, rowhierarchy)
+                graph, dimrow = parseHierarchicalRowHeader(i, j, graph, dimrow, dimcol, rowhierarchy)
             
             if not isEmpty(i,j) :
                 source_cell_qname = getQName(source_cell_name) 
@@ -224,9 +226,6 @@ def parse(r_sheet, w_sheet, graph, CENSUS):
                 elif type == 'RowHeader' :
                     graph, dimrow = parseRowHeader(i, j, graph, dimrow, dimcol)
                     
-                elif type == 'HierarchicalRowHeader' :
-                    graph, dimrow = parseHierarchicalRowHeader(i, j, graph, dimrow, dimcol, rowhierarchy)
-                    
                 elif type == 'Data' :
                     graph = parseData(i, j, graph, dimrow, dimcol)
     return graph
@@ -239,9 +238,7 @@ def parseHierarchicalRowHeader(i, j, graph, dimrow, dimcol, rowhierarchy) :
     
     # Use the rowhierarchy to create a unique qname for the cell's contents, give the source_cell's original value as extra argument
     debug(i,j,"Row hierarchy " + str(rowhierarchy[i]))
-    
     graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, rowhierarchy[i], label=source_cell.value)
-    
     graph.add((CENSUS[source_cell_value_qname], RDFS.comment, Literal('Copied value, original: '+ source_cell.value, 'nl')))
         
     # Now that we know the source cell's value qname, add a link.
@@ -265,6 +262,43 @@ def parseHierarchicalRowHeader(i, j, graph, dimrow, dimcol, rowhierarchy) :
         debug(i,j, "No row dimension for cell")
     dimrow = appendItemInDict(dimrow, i, (source_cell_value_qname, properties))
     return graph, dimrow
+
+def updateHierchicalHeaderList(i, j, rowhierarchy) :
+    """
+    Build up lists for hierarchical row headers
+    
+    Keyword arguments:
+    int i -- row number
+    int j -- col number
+    dict rowhierarchy -- Current build row hierarchy
+    
+    Returns:
+    New row hierarchy dictionary
+    """
+    source_cell = r_sheet.cell(i,j)
+    source_cell_name = cellname(i,j)
+    if (isEmpty(i,j) or str(source_cell.value).lower().strip() == 'id.') :
+        # If the cell is empty, and a HierarchicalRowHeader, add the value of the row header above it.
+        # If the cell is exactly 'id.', add the value of the row header above it. 
+        try :
+            rowhierarchy[i][j] = rowhierarchy[i-1][j]
+            debug(i,j,"Copied from above\nRow hierarchy " + str(rowhierarchy[i]))
+        except :
+            rowhierarchy[i][j] = source_cell.value
+            debug(i,j, "Top row, added value\nRow hierarchy: " + str(rowhierarchy[i]))
+    elif str(source_cell.value).lower().startswith('id.') :
+        # If the cell starts with 'id.', add the value of the row header above it, and append the rest of the cell's value.
+        suffix = source_cell.value[3:]               
+        try :       
+            rowhierarchy[i][j] = rowhierarchy[i-1][j]+suffix
+            debug(i,j, "Copied from above+suffix\nRow hierarchy " + str(rowhierarchy[i]))
+        except :
+            rowhierarchy[i][j] = source_cell.value
+            debug(i,j, "Top row, added value\nRow hierarchy " + str(rowhierarchy[i]))
+    elif not isEmpty(i,j) :
+        rowhierarchy[i][j] = source_cell.value
+        debug(i,j, "Added value\nRow hierarchy " + str(rowhierarchy[i]))
+    return rowhierarchy
 
 def parseRowHeader(i, j, graph, dimrow, dimcol) :
     source_cell = r_sheet.cell(i,j)
@@ -320,6 +354,7 @@ def parseTitle(i, j, graph) :
     graph.add((CENSUS[sheet_qname], D2S['title'], CENSUS[source_cell_value_qname]))
     graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
     
+    
 def parseData(i,j,graph, dimrow, dimcol) :
     source_cell = r_sheet.cell(i,j)
     source_cell_name = cellname(i,j)
@@ -346,43 +381,6 @@ def parseData(i,j,graph, dimrow, dimcol) :
         debug(i,j, "No row dimension for cell")
     return graph
     
-
-def updateHierchicalHeaderList(i, j, rowhierarchy) :
-    """
-    Build up lists for hierarchical row headers
-    
-    Keyword arguments:
-    int i -- row number
-    int j -- col number
-    dict rowhierarchy -- Current build row hierarchy
-    
-    Returns:
-    New row hierarchy dictionary
-    """
-    source_cell = r_sheet.cell(i,j)
-    source_cell_name = cellname(i,j)
-    if (isEmpty(i,j) or str(source_cell.value).lower().strip() == 'id.') :
-        # If the cell is empty, and a HierarchicalRowHeader, add the value of the row header above it.
-        # If the cell is exactly 'id.', add the value of the row header above it. 
-        try :
-            rowhierarchy[i][j] = rowhierarchy[i-1][j]
-            debug(i,j,"Copied from above\nRow hierarchy " + str(rowhierarchy[i]))
-        except :
-            rowhierarchy[i][j] = source_cell.value
-            debug(i,j, "Top row, added value\nRow hierarchy: " + str(rowhierarchy[i]))
-    elif str(source_cell.value).lower().startswith('id.') :
-        # If the cell starts with 'id.', add the value of the row header above it, and append the rest of the cell's value.
-        suffix = source_cell.value[3:]               
-        try :       
-            rowhierarchy[i][j] = rowhierarchy[i-1][j]+suffix
-            debug(i,j, "Copied from above+suffix\nRow hierarchy " + str(rowhierarchy[i]))
-        except :
-            rowhierarchy[i][j] = source_cell.value
-            debug(i,j, "Top row, added value\nRow hierarchy " + str(rowhierarchy[i]))
-    elif not isEmpty(i,j) :
-        rowhierarchy[i][j] = source_cell.value
-        debug(i,j, "Added value\nRow hierarchy " + str(rowhierarchy[i]))
-    return rowhierarchy
     
 if __name__ == '__main__':
     # Open census data files
