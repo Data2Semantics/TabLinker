@@ -1,6 +1,8 @@
 # TabLinker v0.1a
 **Authors**: [Rinke Hoekstra](http://github.com/RinkeHoekstra), [Laurens Rietveld](http://github.com/LaurensRietveld)
+
 **Copyright**: VU University Amsterdam
+
 **License**: [LGPL v3.0](http://www.gnu.org/licenses/lgpl.html)
 
 ## About TabLinker
@@ -9,7 +11,7 @@ TabLinker is experimental software for converting manually annotated Microsoft E
 
 ## Using TabLinker
 
-TabLinker takes annotated Excel files (specified using the `srcMask` option in the [config.ini](http://github.com/Data2Semantics/TabLinker/config.ini) file) and converts them to RDF. This RDF is serialized to the target folder specified using the `targetFolder` option in [config.ini](http://github.com/Data2Semantics/TabLinker/config.ini).
+TabLinker takes annotated Excel files (specified using the `srcMask` option in the [config.ini](http://github.com/Data2Semantics/TabLinker/tree/master/config.ini) file) and converts them to RDF. This RDF is serialized to the target folder specified using the `targetFolder` option in [config.ini](http://github.com/Data2Semantics/TabLinker/tree/master/config.ini).
 
 Annotations in the Excel file should be done using the built-in **style** functionality of Excel (you can specify these by hand). TabLinker currently recognises six styles:
 
@@ -22,9 +24,9 @@ Annotations in the Excel file should be done using the built-in **style** functi
 
 A seventh style, **D2S Metadata**, is currently ignored (See #3).
 
-An [example of such an annotated Excel file](http://github.com/Data2Semantics/TabLinker/input/BRT_1889_02_T1_marked.xls) is provided in the [input](http://github.com/Data2Semantics/TabLinker/input/) directory. There are ways to import the styles defined in that file into your own Excel files.
+An [example of such an annotated Excel file](http://github.com/Data2Semantics/TabLinker/tree/master/input/BRT_1889_02_T1_marked.xls) is provided in the [input](http://github.com/Data2Semantics/TabLinker/tree/master/input/) directory. There are ways to import the styles defined in that file into your own Excel files.
 
-Once you're all set, start the TabLinker by cd-ing to the [src](http://github.com/Data2Semantics/TabLinker/src/) folder, and running:
+Once you're all set, start the TabLinker by cd-ing to the [src](http://github.com/Data2Semantics/TabLinker/tree/master/src/) folder, and running:
 
 ```python tablinker.py```
 
@@ -38,4 +40,4 @@ TabLinker was developed under the following environment:
 
 ## API Documentation
 
-[API documentation](http://github.com/Data2Semantics/TabLinker/doc/tablinker.html) (generated using `pydoc`) is available in the [doc](http://github.com/Data2Semantics/TabLinker/doc/) folder.
+[API documentation](http://github.com/Data2Semantics/TabLinker/tree/master/doc/tablinker.html) (generated using `pydoc`) is available in the [doc](http://github.com/Data2Semantics/TabLinker/tree/master/doc/) folder.
