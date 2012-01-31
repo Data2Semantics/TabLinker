@@ -118,7 +118,7 @@ class TabLinker(object):
     ### 
          
     def getType(self, style):
-        """Get type for a given excel style. Style name must be prefixed by 'D2S'
+        """Get type for a given excel style. Style name must be prefixed by 'D2S '
     
         Arguments:
         style -- Style (string) to check type for
@@ -215,8 +215,9 @@ class TabLinker(object):
         """
         
         if type(names) == dict :
+            qname = self.sheet_qname
             for k in names :
-                qname = self.sheet_qname + '/' + urllib.quote(re.sub('\s','_',unicode(names[k]).strip()).encode('utf-8', 'ignore'))
+                qname = qname + '/' + urllib.quote(re.sub('\s','_',unicode(names[k]).strip()).encode('utf-8', 'ignore'))
         else :
             qname = self.sheet_qname + '/' + urllib.quote(re.sub('\s','_',unicode(names).strip()).encode('utf-8', 'ignore'))
         
@@ -257,8 +258,9 @@ class TabLinker(object):
         """
         self.log.info("Parsing {0} rows and {1} columns.".format(self.rowns,self.colns))
         
-        self.dimcol = {}
-        self.dimrow = {}
+        self.column_dimensions = {}
+        self.property_dimensions = {}
+        self.row_dimensions = {}
         self.rowhierarchy = {}
         
         for i in range(0,self.rowns):
@@ -274,9 +276,11 @@ class TabLinker(object):
                 self.log.debug("({},{}) {}/{}: \"{}\"". format(i,j,self.cellType, self.source_cell_name, self.source_cell.value))
                 
                 if (self.cellType == 'HierarchicalRowHeader') :
-                    #Always update headerlist, and always parseSheet hierarchical row header, even if it doesn't contain data
+#                    self.graph.add((self.SCOPE[self.source_cell_qname],RDF.type,self.D2S[self.cellType])) 
+                    
+                    #Always update headerlist even if it doesn't contain data
                     self.updateRowHierarchy(i, j)
-                    self.parseHierarchicalRowHeader(i, j)
+                   
                 
                 if not self.isEmpty(i,j) :
                     self.graph.add((self.SCOPE[self.source_cell_qname],RDF.type,self.D2S[self.cellType]))
@@ -292,6 +296,9 @@ class TabLinker(object):
                        
                     elif self.cellType == 'RowHeader' :
                         self.parseRowHeader(i, j)
+                    
+                    elif self.cellType == 'HierarchicalRowHeader' :
+                         self.parseHierarchicalRowHeader(i, j)
                         
                     elif self.cellType == 'Data' :
                         self.parseData(i, j)
@@ -359,12 +366,12 @@ class TabLinker(object):
         # Get the properties to use for the row headers
         try :
             properties = []
-            for dim_qname in self.dimcol[j] :
+            for dim_qname in self.property_dimensions[j] :
                 properties.append(dim_qname)
         except KeyError :
-            self.log.debug(i,j, "No row dimension for cell")
+            self.log.debug("({}.{}) No row dimension for cell".format(i,j))
 
-        self.dimrow.setdefault(i, []).append((self.source_cell_value_qname, properties))
+        self.row_dimensions.setdefault(i, []).append((self.source_cell_value_qname, properties))
 
     
     def parseRowHeader(self, i, j) :
@@ -374,14 +381,22 @@ class TabLinker(object):
         self.source_cell_value_qname = self.addValue(self.source_cell.value)
         self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimension'],self.SCOPE[self.source_cell_value_qname]))
         self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
+        
         # Get the properties to use for the row headers
         try :
             properties = []
-            for dim_qname in self.dimcol[j] :
+            for dim_qname in self.property_dimensions[j] :
                 properties.append(dim_qname)
         except KeyError :
-            self.log.debug(i,j, "No row dimension for cell")
-        self.dimrow.setdefault(i,[]).append((self.source_cell_value_qname, properties))
+            self.log.debug("({}.{}) No properties for cell".format(i,j))
+        self.row_dimensions.setdefault(i,[]).append((self.source_cell_value_qname, properties))
+        
+        # Use the column dimensions dictionary to find the objects of the d2s:dimension property
+        try :
+            for dim_qname in self.column_dimensions[j] :
+                self.graph.add((self.SCOPE[self.source_cell_value_qname],self.D2S['dimension'],self.SCOPE[dim_qname]))
+        except KeyError :
+            self.log.debug("({}.{}) No column dimension for cell".format(i,j))
         
         return
     
@@ -393,7 +408,8 @@ class TabLinker(object):
         self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimension'],self.SCOPE[self.source_cell_value_qname]))
         self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
         
-        self.dimcol.setdefault(j,[]).append(self.source_cell_value_qname)
+        # Add the value qname to the column_dimensions list for that column
+        self.column_dimensions.setdefault(j,[]).append(self.source_cell_value_qname)
 
         return
     
@@ -407,7 +423,7 @@ class TabLinker(object):
         self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.QB['DimensionProperty']))
         self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,RDF['Property']))
         
-        self.dimcol.setdefault(j,[]).append(self.source_cell_value_qname)
+        self.property_dimensions.setdefault(j,[]).append(self.source_cell_value_qname)
         
         return
     
@@ -435,18 +451,20 @@ class TabLinker(object):
         self.graph.add((observation,self.QB['dataSet'],self.SCOPE[self.sheet_qname]))
         self.graph.add((observation,self.D2S['populationSize'],Literal(self.source_cell.value)))
         
+        # Use the row dimensions dictionary to find the properties that link data values to row headers
         try :
-            for (dim_qname, properties) in self.dimrow[i] :
+            for (dim_qname, properties) in self.row_dimensions[i] :
                 for p in properties:
                     self.graph.add((observation,self.D2S[p],self.SCOPE[dim_qname]))
         except KeyError :
-            self.log.debug(i,j, "No row dimension for cell")
-            
+            self.log.debug("({}.{}) No row dimension for cell".format(i,j))
+        
+        # Use the column dimensions dictionary to find the objects of the d2s:dimension property
         try :
-            for dim_qname in self.dimcol[j] :
+            for dim_qname in self.column_dimensions[j] :
                 self.graph.add((observation,self.D2S['dimension'],self.SCOPE[dim_qname]))
         except KeyError :
-            self.log.debug(i,j, "No row dimension for cell")
+            self.log.debug("({}.{}) No column dimension for cell".format(i,j))
 
     
 
