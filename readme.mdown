@@ -1,0 +1,41 @@
+# TabLinker v0.1a
+**Authors**: [Rinke Hoekstra](http://github.com/RinkeHoekstra), [Laurens Rietveld](http://github.com/LaurensRietveld)
+**Copyright**: VU University Amsterdam
+**License**: [LGPL v3.0](http://www.gnu.org/licenses/lgpl.html)
+
+## About TabLinker
+
+TabLinker is experimental software for converting manually annotated Microsoft Excel workbooks to the [RDF Data Cube vocabulary](http://publishing-statistical-data.googlecode.com/svn/trunk/specs/src/main/html/cube.html). It is used in the context of the [Data2Semantics](http://www.data2semantics.org) project to investigate the use of Linked Data for humanities research ([Dutch census data](http://www.volkstellingen.nl) produced by [DANS](http://dans.knaw.nl)).
+
+## Using TabLinker
+
+TabLinker takes annotated Excel files (specified using the `srcMask` option in the <config.ini> file) and converts them to RDF. This RDF is serialized to the target folder specified using the `targetFolder` option in <config.ini>.
+
+Annotations in the Excel file should be done using the built-in **style** functionality of Excel (you can specify these by hand). TabLinker currently recognises six styles:
+
+* **D2S Title** - The cell containing the title of a sheet
+* **D2S Data** - A cell that contains data, e.g. a number for the population size 
+* **D2S Header** - Used for the headers of columns
+* **D2S RowHeader** - Used for row headers
+* **D2S HierarchicalRowHeader** - Used for multi-column row headers with subsumption/taxonomic relations between the values of the columns
+* **D2S Property** - Typically used for the header cells directly above RowHeader or HierarchicalRowHeader cells
+
+A seventh style, **D2S Metadata**, is currently ignored (See #3).
+
+An [example of such an annotated Excel file](input/BRT_1889_02_T1_marked.xls) is provided in the [input](input/) directory. There are ways to import the styles defined in that file into your own Excel files.
+
+Once you're all set, start the TabLinker by cd-ing to the [src](src/) folder, and running:
+
+```python tablinker.py```
+
+## Requirements
+
+TabLinker was developed under the following environment:
+
+* Python 2.7
+* The xlutils and xlrd packages from <http://www.python-excel.org/>
+* RDFLib, from <http://www.rdflib.net>
+
+## API Documentation
+
+[API documentation](doc/tablinker.html) (generated using `pydoc`) is available in the [doc](doc/) folder.
