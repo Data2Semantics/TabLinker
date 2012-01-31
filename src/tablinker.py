@@ -11,401 +11,422 @@ import glob
 from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, XSD, BNode
 import re
 from ConfigParser import SafeConfigParser
+import urllib
+import logging
 
 #set default encoding to latin-1, to avoid encode/decode errors for special chars
 #(laurens: actually don't know why encoding/decoding is not sufficient)
+#(rinke: this is a specific requirment for the xlrd and xlutils packages)
+
 import sys
 reload(sys)
 sys.setdefaultencoding("latin-1") #@UndefinedVariable
 
-config = SafeConfigParser()
-config.read('config.ini')
-DCTERMS = Namespace('http:/g/purl.org/dc/terms/')
-SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
-D2S = Namespace('http://www.data2semantics.org/core/')
-QB = Namespace('http://purl.org/linked-data/cube#')
-OWL = Namespace('http://www.w3.org/2002/07/owl#')
 
 
-def initGraph(scope):
-    """Initialize graph
 
-    Keyword arguments:
-    string -- Scope to init graph for 
-    
-    Returns:
-    ConjunctiveGraph
-    Namespace -- Namespace for given scope
-    """
-    CENSUS = Namespace('http://www.data2semantics.org/data/'+scope+'/')
-
-    graph = ConjunctiveGraph()
-
-    # Bind namespaces to graph
-    graph.namespace_manager.bind('dcterms',DCTERMS)
-    graph.namespace_manager.bind('skos',SKOS)
-    graph.namespace_manager.bind('census',CENSUS)
-    graph.namespace_manager.bind('d2s',D2S)
-    graph.namespace_manager.bind('qb',QB)
-    graph.namespace_manager.bind('owl',OWL)
-    
-    graph.add((D2S['populationSize'], RDF.type, QB['MeasureProperty']))
-    graph.add((D2S['populationSize'], RDFS.label, Literal('Population Size','en')))
-    graph.add((D2S['populationSize'], RDFS.label, Literal('Populatie grootte','nl')))
-    graph.add((D2S['populationSize'], RDFS.range, XSD.decimal))
-    
-    graph.add((D2S['dimension'], RDF.type, QB['DimensionProperty']))
-    
-    graph.add((D2S['label'], RDF.type, RDF['Property']))
-
-    return graph, CENSUS
-    
-def getType(style):
-    """Get type for a given excel style. Style must be prefixed by D2S
-
-    Keyword arguments:
-    string -- Style to check type for
-    
-    Returns:
-    String -- The type of this field. In case none is found, 'unknown'
-    """
-    typematch = re.search('D2S\s(.*)',style)
-    if typematch :
-        cellType = typematch.group(1)
-    else :
-        cellType = 'Unknown'
-    return cellType
-
-def isEmpty(i,j):
-    if (r_sheet.cell(i,j).ctype == XL_CELL_EMPTY or r_sheet.cell(i,j).ctype == XL_CELL_BLANK) or r_sheet.cell(i,j).value == '' :
-        return True
-    else :
-        return False
-    
-def isEmptyRow(i,colns):
-    for j in range(0,colns) :
-        if not isEmpty(i,j):
-            return False
-    return True
-
-def isEmptyColumn(j,rowns):
-    for i in range(0,rowns) :
-        if not isEmpty(i,j):
-            return False
-    return True
+class TabLinker(object):
 
 
-def getQName(names = {}):
-    """
-    Keyword arguments:
-    mixed -- Either dict of names or string of a name.
-    
-    Returns:
-    ConjunctiveGraph
-    Namespace -- Namespace for given scope
-    """
-    
-    qname = re.sub('\s','_',r_sheet.name)
-    
-    if type(names) == dict :
-        for k in names :
-            qname = qname + '/' + encodeString(names[k])
-        return qname
-    else :
-        return qname + '/' + encodeString(names)
-    
-def encodeString(string):
-    string = unicode(string)
-    string = re.sub('\s|\.|\(|\)|,|:|;|\[|\]','_',string.strip()).encode('utf-8', 'ignore')
-    return string
-    
+    DCTERMS = Namespace('http:/g/purl.org/dc/terms/')
+    SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
+    D2S = Namespace('http://www.data2semantics.org/core/')
+    QB = Namespace('http://purl.org/linked-data/cube#')
+    OWL = Namespace('http://www.w3.org/2002/07/owl#')
 
-def getLeftWithValue(i,j,cellType):
-    # Get value of first cell to the left of type 'type' that's not empty.
-    if j == 0:
-        return None, None
-    
-    left = r_sheet.cell(i,j-1)
-    left_name = cellname(i,j-1)
-    
-    if isEmpty(i,j-1) :
-        return getLeftWithValue(i, j-1, cellType)
-    elif getType(styles[left].name) == cellType :
-        return left, left_name
-    else :
-        return getLeftWithValue(i, j-1, cellType)
+    def __init__(self, filename):
+        self.log = logging.getLogger(__name__)
+        self.log.setLevel(logging.DEBUG)
         
-
-
-
-def addValue(graph, sheet_qname, source_cell_qname, source_cell_value, label=None):
-    
-    if not label:
-        label = source_cell_value
+        self.log.debug('Initializing Graph')
+        self.initGraph()
         
-    source_cell_value_qname = getQName(source_cell_value)
-    graph.add((CENSUS[source_cell_value_qname],QB['dataSet'],CENSUS[sheet_qname]))
-    graph.add((CENSUS[source_cell_value_qname],RDFS.label,Literal(label,'nl')))
-    graph.add((CENSUS[source_cell_qname],D2S['value'],CENSUS[source_cell_value_qname]))
-    
-    return graph, source_cell_value_qname
-
-def debug(i, j, msg) :
-    """
-    If verbose debug level is enabled, then a debug statement is printed. 
-    Row/col numbers are translated into excel cellnames
-    
-    Keyword arguments:
-    int i -- row number
-    int j -- col number
-    string msg -- Msg to display
-    
-    Returns:
-    New row hierarchy dictionary
-    """
-    if (config.getboolean('debug', 'verbose')) :
-        print cellname(i,j) + ": " + msg
-
-def getValidRowsCols(sheet) :
-    colns = number_of_good_cols(sheet)
-    rowns = number_of_good_rows(sheet)
-    
-    # Check whether the number of good columns and rows are correct
-    while isEmptyRow(rowns-1, colns) :
-        rowns = rowns - 1 
-    while isEmptyColumn(colns-1, rowns) :
-        colns = colns - 1
-    return rowns, colns
-
-def appendItemInDict(dictionary, key, value) :
-    if key not in dictionary : 
-        dictionary[key] = []
-    dictionary[key].append(value)
-    return dictionary
-
-def parse(r_sheet, w_sheet, graph, CENSUS):
-    rowns, colns = getValidRowsCols(r_sheet)
-    print "Parsing " + str(rowns) + " rows and " + str(colns) + " cols"
-    
-    
-    dimcol = {}
-    dimrow = {}
-    rowhierarchy = {}
-    
-    for i in range(0,rowns):
-        rowhierarchy[i] = {}
-        for j in range(0, colns):
-            source_cell = r_sheet.cell(i,j)
-            source_cell_name = cellname(i,j)
-            style = styles[source_cell].name
-            cellType = getType(style)
- 
-            debug(i,j,"{}/{}: \"{}\"".format(cellType, source_cell_name, source_cell.value))
-            
-            if (cellType == 'HierarchicalRowHeader') :
-                #Always update headerlist, and always parse hierarchical row header, even if it doesnt contain data
-                rowhierarchy = updateHierchicalHeaderList(i, j, rowhierarchy)
-                graph, dimrow = parseHierarchicalRowHeader(i, j, graph, dimrow, dimcol, rowhierarchy)
-            
-            if not isEmpty(i,j) :
-                source_cell_qname = getQName(source_cell_name) 
-                
-                graph.add((CENSUS[source_cell_qname],RDF.type,D2S[cellType]))
-                
-                if cellType == 'Title' :
-                    graph = parseTitle(i, j, graph)
-
-                elif cellType == 'Property' :
-                    graph, dimcol = parseProperty(i, j, graph, dimcol)
-                                       
-                elif cellType == 'Header' :
-                    graph, dimcol = parseHeader(i, j, graph, dimcol)
-                   
-                elif cellType == 'RowHeader' :
-                    graph, dimrow = parseRowHeader(i, j, graph, dimrow, dimcol)
-                    
-                elif cellType == 'Data' :
-                    graph = parseData(i, j, graph, dimrow, dimcol)
-    return graph
-
-def parseHierarchicalRowHeader(i, j, graph, dimrow, dimcol, rowhierarchy) :
-    source_cell = r_sheet.cell(i,j)
-    source_cell_name = cellname(i,j)
-    source_cell_qname = getQName(source_cell_name) 
-    sheet_qname = getQName()
-    
-    # Use the rowhierarchy to create a unique qname for the cell's contents, give the source_cell's original value as extra argument
-    debug(i,j,"Row hierarchy " + str(rowhierarchy[i]))
-    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, rowhierarchy[i], label=source_cell.value)
-    graph.add((CENSUS[source_cell_value_qname], RDFS.comment, Literal('Copied value, original: '+ source_cell.value, 'nl')))
-        
-    # Now that we know the source cell's value qname, add a link.
-    graph.add((CENSUS[source_cell_qname], D2S['isDimension'], CENSUS[source_cell_value_qname]))
-    
-    hierarchy_items = rowhierarchy[i].items()
-    try: 
-        parent_values = dict(hierarchy_items[:-1])
-        debug(i,j, "Parent value: " + str(parent_values))
-        parent_value_qname = getQName(parent_values)
-        graph.add((CENSUS[source_cell_value_qname], SKOS['broader'], CENSUS[parent_value_qname]))
-    except :
-        debug(i,j, "Top of hierarchy")
- 
-    # Get the properties to use for the row headers
-    try :
-        properties = []
-        for dim_qname in dimcol[j] :
-            properties.append(dim_qname)
-    except KeyError :
-        debug(i,j, "No row dimension for cell")
-    dimrow = appendItemInDict(dimrow, i, (source_cell_value_qname, properties))
-    return graph, dimrow
-
-def updateHierchicalHeaderList(i, j, rowhierarchy) :
-    """
-    Build up lists for hierarchical row headers
-    
-    Keyword arguments:
-    int i -- row number
-    int j -- col number
-    dict rowhierarchy -- Current build row hierarchy
-    
-    Returns:
-    New row hierarchy dictionary
-    """
-    source_cell = r_sheet.cell(i,j)
-    if (isEmpty(i,j) or str(source_cell.value).lower().strip() == 'id.') :
-        # If the cell is empty, and a HierarchicalRowHeader, add the value of the row header above it.
-        # If the cell is exactly 'id.', add the value of the row header above it. 
-        try :
-            rowhierarchy[i][j] = rowhierarchy[i-1][j]
-            debug(i,j,"Copied from above\nRow hierarchy " + str(rowhierarchy[i]))
-        except :
-            rowhierarchy[i][j] = source_cell.value
-            debug(i,j, "Top row, added value\nRow hierarchy: " + str(rowhierarchy[i]))
-    elif str(source_cell.value).lower().startswith('id.') :
-        # If the cell starts with 'id.', add the value of the row header above it, and append the rest of the cell's value.
-        suffix = source_cell.value[3:]               
-        try :       
-            rowhierarchy[i][j] = rowhierarchy[i-1][j]+suffix
-            debug(i,j, "Copied from above+suffix\nRow hierarchy " + str(rowhierarchy[i]))
-        except :
-            rowhierarchy[i][j] = source_cell.value
-            debug(i,j, "Top row, added value\nRow hierarchy " + str(rowhierarchy[i]))
-    elif not isEmpty(i,j) :
-        rowhierarchy[i][j] = source_cell.value
-        debug(i,j, "Added value\nRow hierarchy " + str(rowhierarchy[i]))
-    return rowhierarchy
-
-def parseRowHeader(i, j, graph, dimrow, dimcol) :
-    source_cell = r_sheet.cell(i,j)
-    source_cell_name = cellname(i,j)
-    source_cell_qname = getQName(source_cell_name) 
-    sheet_qname = getQName()
-    
-    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-    graph.add((CENSUS[source_cell_qname],D2S['isDimension'],CENSUS[source_cell_value_qname]))
-    graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
-    # Get the properties to use for the row headers
-    try :
-        properties = []
-        for dim_qname in dimcol[j] :
-            properties.append(dim_qname)
-    except KeyError :
-        debug(i,j, "No row dimension for cell")
-    dimrow = appendItemInDict(dimrow, i, (source_cell_value_qname, properties))
-    return graph, dimrow
-
-def parseHeader(i, j, graph, dimcol) :
-    source_cell = r_sheet.cell(i,j)
-    source_cell_name = cellname(i,j)
-    source_cell_qname = getQName(source_cell_name) 
-    sheet_qname = getQName()
-    
-    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)   
-    graph.add((CENSUS[source_cell_qname],D2S['isDimension'],CENSUS[source_cell_value_qname]))
-    graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
-    dimcol = appendItemInDict(dimcol, j, source_cell_value_qname)
-    return graph, dimcol
-
-def parseProperty(i, j, graph, dimcol) :
-    source_cell = r_sheet.cell(i,j)
-    source_cell_name = cellname(i,j)
-    source_cell_qname = getQName(source_cell_name) 
-    sheet_qname = getQName()
-    
-    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-    graph.add((CENSUS[source_cell_qname],D2S['isDimensionProperty'],CENSUS[source_cell_value_qname]))
-    graph.add((CENSUS[source_cell_value_qname],RDF.type,QB['DimensionProperty']))
-    graph.add((CENSUS[source_cell_value_qname],RDF.type,RDF['Property']))
-    dimcol = appendItemInDict(dimcol, j, source_cell_value_qname)  
-    return graph, dimcol
-
-def parseTitle(i, j, graph) :
-    source_cell = r_sheet.cell(i,j)
-    source_cell_name = cellname(i,j)
-    source_cell_qname = getQName(source_cell_name) 
-    sheet_qname = getQName()
-    
-    graph, source_cell_value_qname = addValue(graph, sheet_qname, source_cell_qname, source_cell.value)
-    graph.add((CENSUS[sheet_qname], D2S['title'], CENSUS[source_cell_value_qname]))
-    graph.add((CENSUS[source_cell_value_qname],RDF.type,D2S['Dimension']))
-    
-    
-def parseData(i,j,graph, dimrow, dimcol) :
-    source_cell = r_sheet.cell(i,j)
-    source_cell_name = cellname(i,j)
-    source_cell_qname = getQName(source_cell_name) 
-    sheet_qname = getQName()
-    observation = BNode()
-    
-    graph.add((CENSUS[source_cell_qname],D2S['isObservation'], observation))
-    graph.add((observation,RDF.type,QB['Observation']))
-    graph.add((observation,QB['dataSet'],CENSUS[sheet_qname]))
-    graph.add((observation,D2S['populationSize'],Literal(source_cell.value)))
-    
-    try :
-        for (dim_qname, properties) in dimrow[i] :
-            for p in properties:
-                graph.add((observation,D2S[p],CENSUS[dim_qname]))
-    except KeyError :
-        debug(i,j, "No row dimension for cell")
-        
-    try :
-        for dim_qname in dimcol[j] :
-            graph.add((observation,D2S['dimension'],CENSUS[dim_qname]))
-    except KeyError :
-        debug(i,j, "No row dimension for cell")
-    return graph
-    
-    
-if __name__ == '__main__':
-    # Open census data files
-    fileFound = False
-    for filename in glob.glob(config.get('paths', 'srcFolder') + '*_marked.xls') :
-        fileFound = True
-        rb = open_workbook(filename, formatting_info=True)
-        
+        self.log.debug('Setting Scope')
         scope = re.search('.*/(.*?)\.xls',filename).group(1)
-        graph, CENSUS = initGraph(scope)
+        self.setScope(scope)
         
-        #Get styles from xls file
-        styles = Styles(rb)
+        self.log.debug('Loading Excel file {0}.'.format(filename))
+        self.rb = open_workbook(filename, formatting_info=True)
         
-        wb = copy(rb)
+        self.log.debug('Reading styles')
+        self.styles = Styles(self.rb)
         
-        for n in range(rb.nsheets) :
-            r_sheet = rb.sheet_by_index(n)
-            w_sheet = wb.get_sheet(n)
-            graph = parse(r_sheet, w_sheet, graph, CENSUS)
+        self.log.debug('Copied Workbook to writable copy')
+        self.wb = copy(self.rb)
+        
+        
+    def initGraph(self):
+        """Initialize graph
+    
+        Keyword arguments:
+        string -- Scope to init graph for 
+        
+        Returns:
+        ConjunctiveGraph
+        Namespace -- Namespace for given scope
+        """
+    
+        self.graph = ConjunctiveGraph()
+        
+        self.log.debug('Adding namespaces to graph')
+        # Bind namespaces to graph
+        self.graph.namespace_manager.bind('dcterms',self.DCTERMS)
+        self.graph.namespace_manager.bind('skos',self.SKOS)
+        self.graph.namespace_manager.bind('d2s',self.D2S)
+        self.graph.namespace_manager.bind('qb',self.QB)
+        self.graph.namespace_manager.bind('owl',self.OWL)
+        
+        self.log.debug('Adding some schema information (dimension and measure properties) ')
+        self.graph.add((self.D2S['populationSize'], RDF.type, self.QB['MeasureProperty']))
+        self.graph.add((self.D2S['populationSize'], RDFS.label, Literal('Population Size','en')))
+        self.graph.add((self.D2S['populationSize'], RDFS.label, Literal('Populatie grootte','nl')))
+        self.graph.add((self.D2S['populationSize'], RDFS.range, XSD.decimal))
+        
+        self.graph.add((self.D2S['dimension'], RDF.type, self.QB['DimensionProperty']))
+        
+        self.graph.add((self.D2S['label'], RDF.type, RDF['Property']))
+    
+    def setScope(self, scope):
+        self.scope = scope
+        scopens = 'http://www.data2semantics.org/data/'+scope+'/'
+        
+        self.log.debug('Adding namespace for {0}: {1}'.format(scope, scopens))
+        
+        self.SCOPE = Namespace(scopens)
+        self.graph.namespace_manager.bind('',self.SCOPE)
+        
+    def doLink(self):
+        self.log.info('Starting TabLinker for all sheets in workbook')
+        
+        for n in range(self.rb.nsheets) :
+            self.log.debug('Starting with sheet {0}'.format(n))
+            self.r_sheet = self.rb.sheet_by_index(n)
+            self.w_sheet = self.wb.get_sheet(n)
+            
+            self.rowns, self.colns = self.getValidRowsCols()
+                 
+            self.sheet_qname = urllib.quote(re.sub('\s','_',self.r_sheet.name))
+            self.log.debug('Base for QName generator set to: {0}'.format(self.sheet_qname))
+            
+            self.log.debug('Starting parser')
+            self.parse()
+    
+    ###
+    #    Utility Functions
+    ### 
+         
+    def getType(self, style):
+        """Get type for a given excel style. Style name must be prefixed by 'D2S'
+    
+        Keyword arguments:
+        string -- Style to check type for
+        
+        Returns:
+        String -- The type of this field. In case none is found, 'unknown'
+        """
+        typematch = re.search('D2S\s(.*)',style)
+        if typematch :
+            cellType = typematch.group(1)
+        else :
+            cellType = 'Unknown'
+        return cellType
+    
+    def isEmpty(self, i,j):
+        """Check if cell is empty.
+        
+        Keyword arguments:
+        i -- Column
+        j -- Row
+        """
+        if (self.r_sheet.cell(i,j).ctype == XL_CELL_EMPTY or self.r_sheet.cell(i,j).ctype == XL_CELL_BLANK) or self.r_sheet.cell(i,j).value == '' :
+            return True
+        else :
+            return False
+        
+    def isEmptyRow(self, i, colns):
+        for j in range(0,colns) :
+            if not self.isEmpty(i,j):
+                return False
+        return True
+    
+    def isEmptyColumn(self, j, rowns):
+        for i in range(0,rowns) :
+            if not self.isEmpty(i,j):
+                return False
+        return True
+    
+    def getValidRowsCols(self) :
+        colns = number_of_good_cols(self.r_sheet)
+        rowns = number_of_good_rows(self.r_sheet)
+        
+        # Check whether the number of good columns and rows are correct
+        while self.isEmptyRow(rowns-1, colns) :
+            rowns = rowns - 1 
+        while self.isEmptyColumn(colns-1, rowns) :
+            colns = colns - 1
+            
+        self.log.debug('Number of rows with content:    {0}'.format(rowns))
+        self.log.debug('Number of columns with content: {0}'.format(colns))
+        return rowns, colns
+    
+    
+    
+    
+    def getQName(self, names = {}):
+        """
+        Keyword arguments:
+        mixed -- Either dict of names or string of a name.
+        
+        Returns:
+        QName -- a valid QName for the dict or string
+        """
+        
+        if type(names) == dict :
+            for k in names :
+                qname = self.sheet_qname + '/' + urllib.quote(re.sub('\s','_',unicode(names[k]).strip()).encode('utf-8', 'ignore'))
+        else :
+            qname = self.sheet_qname + '/' + urllib.quote(re.sub('\s','_',unicode(names).strip()).encode('utf-8', 'ignore'))
+        
+        self.log.debug('Minted new QName: {}'.format(qname))
+        return qname
+        
+
+            
+    
+    
+    
+    def addValue(self, source_cell_value, label=None):
+        if not label:
+            label = source_cell_value
+            
+        source_cell_value_qname = self.getQName(source_cell_value)
+        self.graph.add((self.SCOPE[source_cell_value_qname],self.QB['dataSet'],self.SCOPE[self.sheet_qname]))
+        self.graph.add((self.SCOPE[source_cell_value_qname],RDFS.label,Literal(label,'nl')))
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['value'],self.SCOPE[source_cell_value_qname]))
+        
+        return source_cell_value_qname
+    
+
+    
+
+    
+#    def appendItemInDict(self, dictionary, key, value) :
+#        if key not in dictionary : 
+#            dictionary[key] = []
+#        dictionary[key].append(value)
+#        return dictionary
+    
+    def parse(self):
+        
+        self.log.info("Parsing {0} rows and {1} columns.".format(self.rowns,self.colns))
+        
+        self.dimcol = {}
+        self.dimrow = {}
+        self.rowhierarchy = {}
+        
+        for i in range(0,self.rowns):
+            self.rowhierarchy[i] = {}
+            
+            for j in range(0, self.colns):
+                self.source_cell = self.r_sheet.cell(i,j)
+                self.source_cell_name = cellname(i,j)
+                self.style = self.styles[self.source_cell].name
+                self.cellType = self.getType(self.style)
+                self.source_cell_qname = self.getQName(self.source_cell_name)
+     
+                self.log.debug("({},{}) {}/{}: \"{}\"". format(i,j,self.cellType, self.source_cell_name, self.source_cell.value))
                 
+                if (self.cellType == 'HierarchicalRowHeader') :
+                    #Always update headerlist, and always parse hierarchical row header, even if it doesn't contain data
+                    self.updateRowHierarchy(i, j)
+                    self.parseHierarchicalRowHeader(i, j)
+                
+                if not self.isEmpty(i,j) :
+                    self.graph.add((self.SCOPE[self.source_cell_qname],RDF.type,self.D2S[self.cellType]))
+                    
+                    if self.cellType == 'Title' :
+                        self.parseTitle(i, j)
+    
+                    elif self.cellType == 'Property' :
+                        self.parseProperty(i, j)
+                                           
+                    elif self.cellType == 'Header' :
+                        self.parseHeader(i, j)
+                       
+                    elif self.cellType == 'RowHeader' :
+                        self.parseRowHeader(i, j)
+                        
+                    elif self.cellType == 'Data' :
+                        self.parseData(i, j)
+        
+        self.log.info("Done parsing...")
+
+    def updateRowHierarchy(self, i, j) :
+        """
+        Build up lists for hierarchical row headers
+        
+        Keyword arguments:
+        int i -- row number
+        int j -- col number
+        dict rowhierarchy -- Current build row hierarchy
+        
+        Returns:
+        New row hierarchy dictionary
+        """
+        if (self.isEmpty(i,j) or str(self.source_cell.value).lower().strip() == 'id.') :
+            # If the cell is empty, and a HierarchicalRowHeader, add the value of the row header above it.
+            # If the cell is exactly 'id.', add the value of the row header above it. 
+            try :
+                self.rowhierarchy[i][j] = self.rowhierarchy[i-1][j]
+                self.log.debug("({},{}) Copied from above\nRow hierarchy: {}".format(i,j,self.rowhierarchy[i]))
+            except :
+                self.rowhierarchy[i][j] = self.source_cell.value
+                self.log.debug("({},{}) Top row, added value\nRow hierarchy: {}".format(i,j,self.rowhierarchy[i]))
+        elif str(self.source_cell.value).lower().startswith('id.') or str(self.source_cell.value).lower().startswith('id '):
+            # If the cell starts with 'id.', add the value of the row header above it, and append the rest of the cell's value.
+            suffix = self.source_cell.value[3:]               
+            try :       
+                self.rowhierarchy[i][j] = self.rowhierarchy[i-1][j]+suffix
+                self.log.debug("({},{}) Copied from above+suffix\nRow hierarchy {}".format(i,j,self.rowhierarchy[i]))
+            except :
+                self.rowhierarchy[i][j] = self.source_cell.value
+                self.log.debug("({},{}) Top row, added value\nRow hierarchy {}".format(i,j,self.rowhierarchy[i]))
+        elif not self.isEmpty(i,j) :
+            self.rowhierarchy[i][j] = self.source_cell.value
+            self.log.debug("({},{}) Added value\nRow hierarchy {}".format(i,j,self.rowhierarchy[i]))
+        return self.rowhierarchy
+    
+    def parseHierarchicalRowHeader(self, i, j) :
 
         
-        print "Serializing graph to file {}.ttl".format(scope)
-        graph.serialize(config.get('paths', 'trgtFolder') + scope+'.ttl', format='turtle')
+        # Use the rowhierarchy to create a unique qname for the cell's contents, give the source_cell's original value as extra argument
+        self.log.debug("Parsing HierarchicalRowHeader")
+        
+        self.source_cell_value_qname = self.addValue(self.rowhierarchy[i], label=self.source_cell.value)
+        
+        self.graph.add((self.SCOPE[self.source_cell_value_qname], RDFS.comment, Literal('Copied value, original: '+ self.source_cell.value, 'nl')))
+            
+        # Now that we know the source cell's value qname, add a link.
+        self.graph.add((self.SCOPE[self.source_cell_qname], self.D2S['isDimension'], self.SCOPE[self.source_cell_value_qname]))
+        
+        hierarchy_items = self.rowhierarchy[i].items()
+        try: 
+            parent_values = dict(hierarchy_items[:-1])
+            self.log.debug(i,j, "Parent value: " + str(parent_values))
+            parent_value_qname = self.getQName(parent_values)
+            self.graph.add((self.SCOPE[self.source_cell_value_qname], self.SKOS['broader'], self.SCOPE[parent_value_qname]))
+        except :
+            self.log.debug(i,j, "Top of hierarchy")
+     
+        # Get the properties to use for the row headers
+        try :
+            properties = []
+            for dim_qname in self.dimcol[j] :
+                properties.append(dim_qname)
+        except KeyError :
+            self.log.debug(i,j, "No row dimension for cell")
+
+        self.dimrow.setdefault(i, []).append((self.source_cell_value_qname, properties))
+
     
-    if fileFound :
-        print "Done"
-    else :
-        print "No files found. Path with location of marked xls files ok?"
-        print "Path searched in: " + config.get('paths', 'srcFolder')
+    def parseRowHeader(self, i, j) :
+        self.source_cell_value_qname = self.addValue(self.source_cell.value)
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimension'],self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
+        # Get the properties to use for the row headers
+        try :
+            properties = []
+            for dim_qname in self.dimcol[j] :
+                properties.append(dim_qname)
+        except KeyError :
+            self.log.debug(i,j, "No row dimension for cell")
+        self.dimrow.setdefault(i,[]).append((self.source_cell_value_qname, properties))
+        
+        return
+    
+    def parseHeader(self, i, j) :
+        self.source_cell_value_qname = self.addValue(self.source_cell.value)   
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimension'],self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
+        
+        self.dimcol.setdefault(j,[]).append(self.source_cell_value_qname)
+
+        return
+    
+    def parseProperty(self, i, j) :
+        self.source_cell_value_qname = self.addValue(self.source_cell.value)
+        
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimensionProperty'],self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.QB['DimensionProperty']))
+        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,RDF['Property']))
+        
+        self.dimcol.setdefault(j,[]).append(self.source_cell_value_qname)
+        
+        return
+    
+    def parseTitle(self, i, j) :
+
+        self.source_cell_value_qname = self.addValue(self.source_cell.value)
+        self.graph.add((self.SCOPE[self.sheet_qname], self.D2S['title'], self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
+        
+        return
+        
+        
+    def parseData(self, i,j) :
+
+        observation = BNode()
+        
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isObservation'], observation))
+        self.graph.add((observation,RDF.type,self.QB['Observation']))
+        self.graph.add((observation,self.QB['dataSet'],self.SCOPE[self.sheet_qname]))
+        self.graph.add((observation,self.D2S['populationSize'],Literal(self.source_cell.value)))
+        
+        try :
+            for (dim_qname, properties) in self.dimrow[i] :
+                for p in properties:
+                    self.graph.add((observation,self.D2S[p],self.SCOPE[dim_qname]))
+        except KeyError :
+            self.log.debug(i,j, "No row dimension for cell")
+            
+        try :
+            for dim_qname in self.dimcol[j] :
+                self.graph.add((observation,self.D2S['dimension'],self.SCOPE[dim_qname]))
+        except KeyError :
+            self.log.debug(i,j, "No row dimension for cell")
+
+    
+
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    
+    logging.debug('Reading configuration file')
+    
+    config = SafeConfigParser()
+    config.read('../config.ini')
+    
+    # Open census data files
+    files = glob.glob(config.get('paths', 'srcFolder') + '*_marked.xls')
+    
+    if len(files) == 0 :
+        logging.WARNING("No files found. Are you sure the path to the annotated XLS files is correct?")
+        logging.info("Path searched: " + config.get('paths', 'srcFolder'))
+    
+    for filename in files :
+        
+        logging.debug('Starting TabLinker for {0}'.format(filename))
+        tl = TabLinker(filename)
+        
+        logging.debug('Calling linker')
+        tl.doLink()
+        logging.debug('Done linking')
+
+        turtleFile = config.get('paths', 'trgtFolder') + tl.scope +'.ttl'
+        logging.info("Serializing graph to file {}".format(turtleFile))
+        tl.graph.serialize(turtleFile, format='turtle')
+        logging.info("Done")
+    
+
+        
