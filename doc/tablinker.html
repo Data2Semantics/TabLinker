@@ -56,18 +56,17 @@ Keyword&nbsp;arguments:<br>
 filename&nbsp;--&nbsp;String&nbsp;containing&nbsp;the&nbsp;name&nbsp;of&nbsp;the&nbsp;current&nbsp;Excel&nbsp;file&nbsp;being&nbsp;examined<br>
 level&nbsp;--&nbsp;A&nbsp;logging&nbsp;level&nbsp;as&nbsp;defined&nbsp;in&nbsp;the&nbsp;logging&nbsp;module</tt></dd></dl>
 
-<dl><dt><a name="TabLinker-addValue"><strong>addValue</strong></a>(self, source_cell_value, label<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;"value"&nbsp;+&nbsp;optional&nbsp;label&nbsp;to&nbsp;the&nbsp;graph&nbsp;for&nbsp;a&nbsp;cell&nbsp;in&nbsp;the&nbsp;source&nbsp;Excel&nbsp;sheet.&nbsp;The&nbsp;value&nbsp;is&nbsp;typically&nbsp;the&nbsp;value&nbsp;stored&nbsp;in&nbsp;the&nbsp;source&nbsp;cell&nbsp;itself,&nbsp;but&nbsp;may&nbsp;also&nbsp;be&nbsp;a&nbsp;copy&nbsp;of&nbsp;another&nbsp;cell&nbsp;(e.g.&nbsp;in&nbsp;the&nbsp;case&nbsp;of&nbsp;'idem.').<br>
+<dl><dt><a name="TabLinker-addValue"><strong>addValue</strong></a>(self, source_cell_value, altLabel<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;"value"&nbsp;+&nbsp;optional&nbsp;label&nbsp;to&nbsp;the&nbsp;graph&nbsp;for&nbsp;a&nbsp;cell&nbsp;in&nbsp;the&nbsp;source&nbsp;Excel&nbsp;sheet.&nbsp;The&nbsp;value&nbsp;is&nbsp;typically&nbsp;the&nbsp;value&nbsp;stored&nbsp;in&nbsp;the&nbsp;source&nbsp;cell&nbsp;itself,&nbsp;but&nbsp;may&nbsp;also&nbsp;be&nbsp;a&nbsp;copy&nbsp;of&nbsp;another&nbsp;cell&nbsp;(e.g.&nbsp;in&nbsp;the&nbsp;case&nbsp;of&nbsp;'idem.').<br>
 &nbsp;<br>
 Arguments:<br>
 source_cell_value&nbsp;--&nbsp;The&nbsp;string&nbsp;representing&nbsp;the&nbsp;value&nbsp;of&nbsp;the&nbsp;source&nbsp;cell<br>
-label&nbsp;--&nbsp;Optional&nbsp;label&nbsp;for&nbsp;the&nbsp;value,&nbsp;otherwise&nbsp;the&nbsp;value&nbsp;itself&nbsp;is&nbsp;copied.<br>
 &nbsp;<br>
 Returns:<br>
 source_cell_value_qname&nbsp;--&nbsp;a&nbsp;valid&nbsp;QName&nbsp;for&nbsp;the&nbsp;value&nbsp;of&nbsp;the&nbsp;source&nbsp;cell</tt></dd></dl>
 
 <dl><dt><a name="TabLinker-doLink"><strong>doLink</strong></a>(self)</dt></dl>
 
-<dl><dt><a name="TabLinker-getQName"><strong>getQName</strong></a>(self, names<font color="#909090">={}</font>)</dt><dd><tt>Create&nbsp;a&nbsp;valid&nbsp;QName&nbsp;from&nbsp;a&nbsp;string&nbsp;or&nbsp;dictionary&nbsp;of&nbsp;names<br>
+<dl><dt><a name="TabLinker-getQName"><strong>getQName</strong></a>(self, names)</dt><dd><tt>Create&nbsp;a&nbsp;valid&nbsp;QName&nbsp;from&nbsp;a&nbsp;string&nbsp;or&nbsp;dictionary&nbsp;of&nbsp;names<br>
 &nbsp;<br>
 Arguments:<br>
 names&nbsp;--&nbsp;Either&nbsp;dictionary&nbsp;of&nbsp;names&nbsp;or&nbsp;string&nbsp;of&nbsp;a&nbsp;name.<br>
@@ -75,7 +74,7 @@ names&nbsp;--&nbsp;Either&nbsp;dictionary&nbsp;of&nbsp;names&nbsp;or&nbsp;string
 Returns:<br>
 qname&nbsp;--&nbsp;a&nbsp;valid&nbsp;QName&nbsp;for&nbsp;the&nbsp;dictionary&nbsp;or&nbsp;string</tt></dd></dl>
 
-<dl><dt><a name="TabLinker-getType"><strong>getType</strong></a>(self, style)</dt><dd><tt>Get&nbsp;type&nbsp;for&nbsp;a&nbsp;given&nbsp;excel&nbsp;style.&nbsp;Style&nbsp;name&nbsp;must&nbsp;be&nbsp;prefixed&nbsp;by&nbsp;'D2S'<br>
+<dl><dt><a name="TabLinker-getType"><strong>getType</strong></a>(self, style)</dt><dd><tt>Get&nbsp;type&nbsp;for&nbsp;a&nbsp;given&nbsp;excel&nbsp;style.&nbsp;Style&nbsp;name&nbsp;must&nbsp;be&nbsp;prefixed&nbsp;by&nbsp;'D2S&nbsp;'<br>
 &nbsp;<br>
 Arguments:<br>
 style&nbsp;--&nbsp;Style&nbsp;(string)&nbsp;to&nbsp;check&nbsp;type&nbsp;for<br>
@@ -125,6 +124,8 @@ false&nbsp;--&nbsp;if&nbsp;the&nbsp;row&nbsp;is&nbsp;not&nbsp;empty</tt></dd></d
 <dl><dt><a name="TabLinker-parseHeader"><strong>parseHeader</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Header&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
 
 <dl><dt><a name="TabLinker-parseHierarchicalRowHeader"><strong>parseHierarchicalRowHeader</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;HierarchicalRowHeader&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
+
+<dl><dt><a name="TabLinker-parseLabel"><strong>parseLabel</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Label&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
 
 <dl><dt><a name="TabLinker-parseProperty"><strong>parseProperty</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Property&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
 
