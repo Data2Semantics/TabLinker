@@ -9,11 +9,13 @@
 
 TabLinker is experimental software for converting manually annotated Microsoft Excel workbooks to the [RDF Data Cube vocabulary](http://publishing-statistical-data.googlecode.com/svn/trunk/specs/src/main/html/cube.html). It is used in the context of the [Data2Semantics](http://www.data2semantics.org) project to investigate the use of Linked Data for humanities research ([Dutch census data](http://www.volkstellingen.nl) produced by [DANS](http://dans.knaw.nl)).
 
+TabLinker was designed for converting Excel or CSV files to RDF (triplification, RDF-izing) that have a complex layout and cannot be handled by fully automatic csv2rdf scripts.
+
 A presentation about Linked Census Data, including TabLinker is [available from SlideShare](http://www.slideshare.net/rinkehoekstra/linked-census-data).
 
 ## Using TabLinker
 
-TabLinker takes annotated Excel files (specified using the `srcMask` option in the [config.ini](http://github.com/Data2Semantics/TabLinker/tree/master/config.ini) file) and converts them to RDF. This RDF is serialized to the target folder specified using the `targetFolder` option in [config.ini](http://github.com/Data2Semantics/TabLinker/tree/master/config.ini).
+TabLinker takes annotated Excel files (found using the `srcMask` option in the [config.ini](http://github.com/Data2Semantics/TabLinker/tree/master/config.ini) file) and converts them to RDF. This RDF is serialized to the target folder specified using the `targetFolder` option in [config.ini](http://github.com/Data2Semantics/TabLinker/tree/master/config.ini).
 
 Annotations in the Excel file should be done using the built-in **style** functionality of Excel (you can specify these by hand). TabLinker currently recognises seven styles:
 
