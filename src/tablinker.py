@@ -203,7 +203,7 @@ class TabLinker(object):
         self.log.debug('Number of columns with content: {0}'.format(colns))
         return rowns, colns
     
-    def getQName(self, names = {}):
+    def getQName(self, names):
         """
         Create a valid QName from a string or dictionary of names
         
@@ -226,24 +226,40 @@ class TabLinker(object):
         
 
             
-    def addValue(self, source_cell_value, label=None):
+    def addValue(self, source_cell_value, altLabel=None):
         """
         Add a "value" + optional label to the graph for a cell in the source Excel sheet. The value is typically the value stored in the source cell itself, but may also be a copy of another cell (e.g. in the case of 'idem.').
         
         Arguments:
         source_cell_value -- The string representing the value of the source cell
-        label -- Optional label for the value, otherwise the value itself is copied.
         
         Returns:
         source_cell_value_qname -- a valid QName for the value of the source cell
         """
-        if not label:
-            label = source_cell_value
-            
         source_cell_value_qname = self.getQName(source_cell_value)
         self.graph.add((self.SCOPE[source_cell_value_qname],self.QB['dataSet'],self.SCOPE[self.sheet_qname]))
-        self.graph.add((self.SCOPE[source_cell_value_qname],RDFS.label,Literal(label,'nl')))
+        
         self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['value'],self.SCOPE[source_cell_value_qname]))
+        
+        # If the source_cell_value is actually a dictionary (e.g. in the case of HierarchicalRowHeaders), then use the last element of the row hierarchy as prefLabel
+        # Otherwise just use the source_cell_value as prefLabel
+        if type(source_cell_value) == dict :
+            self.graph.add((self.SCOPE[source_cell_value_qname],self.SKOS.prefLabel,Literal(source_cell_value.values()[-1],'nl')))
+            
+            if altLabel and altLabel != source_cell_value.values()[-1]:
+                # If altLabel has a value (typically for HierarchicalRowHeaders) different from the last element in the row hierarchy, we add it as alternative label. 
+                self.graph.add((self.SCOPE[source_cell_value_qname],self.SKOS.altLabel,Literal(altLabel,'nl')))
+        else :
+            self.graph.add((self.SCOPE[source_cell_value_qname],self.SKOS.prefLabel,Literal(source_cell_value,'nl')))
+            
+            if altLabel and altLabel != source_cell_value:
+                # If altLabel has a value (typically for HierarchicalRowHeaders) different from the source_cell_value, we add it as alternative label. 
+                self.graph.add((self.SCOPE[source_cell_value_qname],self.SKOS.altLabel,Literal(altLabel,'nl')))
+        
+        
+
+            
+                    
         
         return source_cell_value_qname
     
@@ -298,7 +314,10 @@ class TabLinker(object):
                         self.parseRowHeader(i, j)
                     
                     elif self.cellType == 'HierarchicalRowHeader' :
-                         self.parseHierarchicalRowHeader(i, j)
+                        self.parseHierarchicalRowHeader(i, j)
+                         
+                    elif self.cellType == 'Label' :
+                        self.parseLabel(i, j)
                         
                     elif self.cellType == 'Data' :
                         self.parseData(i, j)
@@ -318,13 +337,15 @@ class TabLinker(object):
         """
         if (self.isEmpty(i,j) or str(self.source_cell.value).lower().strip() == 'id.') :
             # If the cell is empty, and a HierarchicalRowHeader, add the value of the row header above it.
+            # If the cell above is not in the rowhierarchy, don't do anything.
             # If the cell is exactly 'id.', add the value of the row header above it. 
             try :
                 self.rowhierarchy[i][j] = self.rowhierarchy[i-1][j]
                 self.log.debug("({},{}) Copied from above\nRow hierarchy: {}".format(i,j,self.rowhierarchy[i]))
             except :
-                self.rowhierarchy[i][j] = self.source_cell.value
-                self.log.debug("({},{}) Top row, added value\nRow hierarchy: {}".format(i,j,self.rowhierarchy[i]))
+                # REMOVED because of double slashes in uris
+                # self.rowhierarchy[i][j] = self.source_cell.value
+                self.log.debug("({},{}) Top row, added nothing\nRow hierarchy: {}".format(i,j,self.rowhierarchy[i]))
         elif str(self.source_cell.value).lower().startswith('id.') or str(self.source_cell.value).lower().startswith('id '):
             # If the cell starts with 'id.', add the value of the row header above it, and append the rest of the cell's value.
             suffix = self.source_cell.value[3:]               
@@ -347,12 +368,12 @@ class TabLinker(object):
         # Use the rowhierarchy to create a unique qname for the cell's contents, give the source_cell's original value as extra argument
         self.log.debug("Parsing HierarchicalRowHeader")
         
-        self.source_cell_value_qname = self.addValue(self.rowhierarchy[i], label=self.source_cell.value)
+        self.source_cell_value_qname = self.addValue(self.rowhierarchy[i], altLabel=self.source_cell.value)
         
-        self.graph.add((self.SCOPE[self.source_cell_value_qname], RDFS.comment, Literal('Copied value, original: '+ self.source_cell.value, 'nl')))
             
-        # Now that we know the source cell's value qname, add a link.
+        # Now that we know the source cell's value qname, add a d2s:isDimension link and the skos:Concept type
         self.graph.add((self.SCOPE[self.source_cell_qname], self.D2S['isDimension'], self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_qname], RDF.type, self.SKOS.Concept))
         
         hierarchy_items = self.rowhierarchy[i].items()
         try: 
@@ -373,6 +394,28 @@ class TabLinker(object):
 
         self.row_dimensions.setdefault(i, []).append((self.source_cell_value_qname, properties))
 
+    def parseLabel(self, i, j):
+        """
+        Create relevant triples for the cell marked as Label (i, j are row and column)
+        """  
+        
+        self.log.debug("Parsing Label")
+        
+        # Get the QName of the HierarchicalRowHeader cell that this label belongs to, based on the rowhierarchy for this row (i)
+        hierarchicalRowHeader_value_qname = self.getQName(self.rowhierarchy[i])
+        
+        prefLabels = self.graph.objects(self.SCOPE[hierarchicalRowHeader_value_qname], self.SKOS.prefLabel)
+        for label in prefLabels :
+            # If the hierarchicalRowHeader QName already has a preferred label, turn it into a skos:altLabel
+            self.graph.remove((self.SCOPE[hierarchicalRowHeader_value_qname],self.SKOS.prefLabel,label))
+            self.graph.add((self.SCOPE[hierarchicalRowHeader_value_qname],self.SKOS.altLabel,label))
+            self.log.info("Turned skos:prefLabel {} for {} into a skos:altLabel".format(label, hierarchicalRowHeader_value_qname))
+        
+        # Add the value of the label cell as skos:prefLabel to the header cell
+        self.graph.add((self.SCOPE[hierarchicalRowHeader_value_qname], self.SKOS.prefLabel, Literal(self.source_cell.value, 'nl')))
+            
+        # Record that this source_cell_qname is the label for the HierarchicalRowHeader cell
+        self.graph.add((self.SCOPE[self.source_cell_qname], self.D2S['isLabel'], self.SCOPE[hierarchicalRowHeader_value_qname]))
     
     def parseRowHeader(self, i, j) :
         """
@@ -381,6 +424,7 @@ class TabLinker(object):
         self.source_cell_value_qname = self.addValue(self.source_cell.value)
         self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimension'],self.SCOPE[self.source_cell_value_qname]))
         self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
+        self.graph.add((self.SCOPE[self.source_cell_qname], RDF.type, self.SKOS.Concept))
         
         # Get the properties to use for the row headers
         try :
@@ -407,6 +451,7 @@ class TabLinker(object):
         self.source_cell_value_qname = self.addValue(self.source_cell.value)   
         self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimension'],self.SCOPE[self.source_cell_value_qname]))
         self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
+        self.graph.add((self.SCOPE[self.source_cell_qname], RDF.type, self.SKOS.Concept))
         
         # Add the value qname to the column_dimensions list for that column
         self.column_dimensions.setdefault(j,[]).append(self.source_cell_value_qname)
@@ -484,7 +529,7 @@ if __name__ == '__main__':
         srcMask = config.get('paths', 'srcMask')
         targetFolder = config.get('paths','targetFolder')
         verbose = config.get('debug','verbose')
-        if verbose == 1 :
+        if verbose == "1" :
             logLevel = logging.DEBUG
         else :
             logLevel = logging.INFO
