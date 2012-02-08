@@ -23,7 +23,7 @@ Annotations in the Excel file should be done using the built-in **style** functi
 
 * **D2S Title** - The cell containing the title of a sheet
 * **D2S Data** - A cell that contains data, e.g. a number for the population size 
-* **D2S Header** - Used for the headers of columns
+* **D2S ColHeader** - Used for the headers of columns
 * **D2S RowHeader** - Used for row headers
 * **D2S HierarchicalRowHeader** - Used for multi-column row headers with subsumption/taxonomic relations between the values of the columns
 * **D2S Property** - Typically used for the header cells directly above RowHeader or HierarchicalRowHeader cells, cell values are the properties that relate Data cells to RowHeader and HierarchicalRowHeader cells.

@@ -307,8 +307,8 @@ class TabLinker(object):
                     elif self.cellType == 'Property' :
                         self.parseProperty(i, j)
                                            
-                    elif self.cellType == 'Header' :
-                        self.parseHeader(i, j)
+                    elif self.cellType == 'ColHeader' :
+                        self.parseColHeader(i, j)
                        
                     elif self.cellType == 'RowHeader' :
                         self.parseRowHeader(i, j)
@@ -347,7 +347,7 @@ class TabLinker(object):
                 # self.rowhierarchy[i][j] = self.source_cell.value
                 self.log.debug("({},{}) Top row, added nothing\nRow hierarchy: {}".format(i,j,self.rowhierarchy[i]))
         elif str(self.source_cell.value).lower().startswith('id.') or str(self.source_cell.value).lower().startswith('id '):
-            # If the cell starts with 'id.', add the value of the row header above it, and append the rest of the cell's value.
+            # If the cell starts with 'id.', add the value of the row  above it, and append the rest of the cell's value.
             suffix = self.source_cell.value[3:]               
             try :       
                 self.rowhierarchy[i][j] = self.rowhierarchy[i-1][j]+suffix
@@ -444,7 +444,7 @@ class TabLinker(object):
         
         return
     
-    def parseHeader(self, i, j) :
+    def parseColHeader(self, i, j) :
         """
         Create relevant triples for the cell marked as Header (i, j are row and column)
         """
