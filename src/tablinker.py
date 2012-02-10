@@ -225,7 +225,7 @@ class TabLinker(object):
         return qname
     
     def escapeString(self, string):
-        return urllib.quote(re.sub('\s|\(|\)','_',unicode(string).strip()).encode('utf-8', 'ignore'))
+        return urllib.quote(re.sub('\s|\(|\)|,','_',unicode(string).strip()).encode('utf-8', 'ignore'))
 
             
     def addValue(self, source_cell_value, altLabel=None):
