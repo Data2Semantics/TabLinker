@@ -217,13 +217,15 @@ class TabLinker(object):
         if type(names) == dict :
             qname = self.sheet_qname
             for k in names :
-                qname = qname + '/' + urllib.quote(re.sub('\s','_',unicode(names[k]).strip()).encode('utf-8', 'ignore'))
+                qname = qname + '/' + self.escapeString(names[k])
         else :
-            qname = self.sheet_qname + '/' + urllib.quote(re.sub('\s','_',unicode(names).strip()).encode('utf-8', 'ignore'))
+            qname = self.sheet_qname + '/' + self.escapeString(names)
         
         self.log.debug('Minted new QName: {}'.format(qname))
         return qname
-        
+    
+    def escapeString(self, string):
+        return urllib.quote(re.sub('\s|\(|\)','_',unicode(string).strip()).encode('utf-8', 'ignore'))
 
             
     def addValue(self, source_cell_value, altLabel=None):
@@ -255,11 +257,6 @@ class TabLinker(object):
             if altLabel and altLabel != source_cell_value:
                 # If altLabel has a value (typically for HierarchicalRowHeaders) different from the source_cell_value, we add it as alternative label. 
                 self.graph.add((self.SCOPE[source_cell_value_qname],self.SKOS.altLabel,Literal(altLabel,'nl')))
-        
-        
-
-            
-                    
         
         return source_cell_value_qname
     
