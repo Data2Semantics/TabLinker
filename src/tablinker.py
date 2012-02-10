@@ -217,15 +217,26 @@ class TabLinker(object):
         if type(names) == dict :
             qname = self.sheet_qname
             for k in names :
-                qname = qname + '/' + self.escapeString(names[k])
+                qname = qname + '/' + self.processString(names[k])
         else :
-            qname = self.sheet_qname + '/' + self.escapeString(names)
+            qname = self.sheet_qname + '/' + self.processString(names)
         
         self.log.debug('Minted new QName: {}'.format(qname))
         return qname
     
-    def escapeString(self, string):
-        return urllib.quote(re.sub('\s|\(|\)|,','_',unicode(string).strip()).encode('utf-8', 'ignore'))
+
+    def processString(self, string):
+        """
+        Remove illegal characters (comma, brackets, etc) from string, and replace it with underscore. Useful for URIs
+        
+        Arguments:
+        string -- The string representing the value of the source cell
+        
+        Returns:
+        processedString -- The processed string
+        """
+        
+        return urllib.quote(re.sub('\s|\(|\)|,|\.','_',unicode(string).strip()).encode('utf-8', 'ignore'))
 
             
     def addValue(self, source_cell_value, altLabel=None):
