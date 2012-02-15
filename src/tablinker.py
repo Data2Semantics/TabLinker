@@ -30,12 +30,7 @@ sys.setdefaultencoding("latin-1") #@UndefinedVariable
 
 class TabLinker(object):
 
-
-    DCTERMS = Namespace('http:/g/purl.org/dc/terms/')
-    SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
-    D2S = Namespace('http://www.data2semantics.org/core/')
-    QB = Namespace('http://purl.org/linked-data/cube#')
-    OWL = Namespace('http://www.w3.org/2002/07/owl#')
+    namespaces = {'DCTERMS':Namespace('http:/g/purl.org/dc/terms/'), 'SKOS':Namespace('http://www.w3.org/2004/02/skos/core#'), 'D2S':Namespace('http://www.data2semantics.org/core/'), 'QB':Namespace('http://purl.org/linked-data/cube#'), 'OWL':Namespace('http://www.w3.org/2002/07/owl#')}
 
     def __init__(self, filename, level = logging.DEBUG):
         """TabLinker constructor
@@ -71,21 +66,21 @@ class TabLinker(object):
         
         self.log.debug('Adding namespaces to graph')
         # Bind namespaces to graph
-        self.graph.namespace_manager.bind('dcterms',self.DCTERMS)
-        self.graph.namespace_manager.bind('skos',self.SKOS)
-        self.graph.namespace_manager.bind('d2s',self.D2S)
-        self.graph.namespace_manager.bind('qb',self.QB)
-        self.graph.namespace_manager.bind('owl',self.OWL)
+        self.graph.namespace_manager.bind('dcterms',self.namespaces['DCTERMS'])
+        self.graph.namespace_manager.bind('skos',self.namespaces['SKOS'])
+        self.graph.namespace_manager.bind('d2s',self.namespaces['D2S'])
+        self.graph.namespace_manager.bind('qb',self.namespaces['QB'])
+        self.graph.namespace_manager.bind('owl',self.namespaces['OWL'])
         
         self.log.debug('Adding some schema information (dimension and measure properties) ')
-        self.graph.add((self.D2S['populationSize'], RDF.type, self.QB['MeasureProperty']))
-        self.graph.add((self.D2S['populationSize'], RDFS.label, Literal('Population Size','en')))
-        self.graph.add((self.D2S['populationSize'], RDFS.label, Literal('Populatie grootte','nl')))
-        self.graph.add((self.D2S['populationSize'], RDFS.range, XSD.decimal))
+        self.graph.add((self.namespaces['D2S']['populationSize'], RDF.type, self.namespaces['QB']['MeasureProperty']))
+        self.graph.add((self.namespaces['D2S']['populationSize'], RDFS.label, Literal('Population Size','en')))
+        self.graph.add((self.namespaces['D2S']['populationSize'], RDFS.label, Literal('Populatie grootte','nl')))
+        self.graph.add((self.namespaces['D2S']['populationSize'], RDFS.range, XSD.decimal))
         
-        self.graph.add((self.D2S['dimension'], RDF.type, self.QB['DimensionProperty']))
+        self.graph.add((self.namespaces['D2S']['dimension'], RDF.type, self.namespaces['QB']['DimensionProperty']))
         
-        self.graph.add((self.D2S['label'], RDF.type, RDF['Property']))
+        self.graph.add((self.namespaces['D2S']['label'], RDF.type, RDF['Property']))
     
     def setScope(self, scope):
         """Set the default namespace and base for all URIs of the current workbook"""
@@ -250,24 +245,24 @@ class TabLinker(object):
         source_cell_value_qname -- a valid QName for the value of the source cell
         """
         source_cell_value_qname = self.getQName(source_cell_value)
-        self.graph.add((self.SCOPE[source_cell_value_qname],self.QB['dataSet'],self.SCOPE[self.sheet_qname]))
+        self.graph.add((self.SCOPE[source_cell_value_qname],self.namespaces['QB']['dataSet'],self.SCOPE[self.sheet_qname]))
         
-        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['value'],self.SCOPE[source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.namespaces['D2S']['value'],self.SCOPE[source_cell_value_qname]))
         
         # If the source_cell_value is actually a dictionary (e.g. in the case of HierarchicalRowHeaders), then use the last element of the row hierarchy as prefLabel
         # Otherwise just use the source_cell_value as prefLabel
         if type(source_cell_value) == dict :
-            self.graph.add((self.SCOPE[source_cell_value_qname],self.SKOS.prefLabel,Literal(source_cell_value.values()[-1],'nl')))
+            self.graph.add((self.SCOPE[source_cell_value_qname],self.namespaces['SKOS'].prefLabel,Literal(source_cell_value.values()[-1],'nl')))
             
             if altLabel and altLabel != source_cell_value.values()[-1]:
                 # If altLabel has a value (typically for HierarchicalRowHeaders) different from the last element in the row hierarchy, we add it as alternative label. 
-                self.graph.add((self.SCOPE[source_cell_value_qname],self.SKOS.altLabel,Literal(altLabel,'nl')))
+                self.graph.add((self.SCOPE[source_cell_value_qname],self.namespaces['SKOS'].altLabel,Literal(altLabel,'nl')))
         else :
-            self.graph.add((self.SCOPE[source_cell_value_qname],self.SKOS.prefLabel,Literal(source_cell_value,'nl')))
+            self.graph.add((self.SCOPE[source_cell_value_qname],self.namespaces['SKOS'].prefLabel,Literal(source_cell_value,'nl')))
             
             if altLabel and altLabel != source_cell_value:
                 # If altLabel has a value (typically for HierarchicalRowHeaders) different from the source_cell_value, we add it as alternative label. 
-                self.graph.add((self.SCOPE[source_cell_value_qname],self.SKOS.altLabel,Literal(altLabel,'nl')))
+                self.graph.add((self.SCOPE[source_cell_value_qname],self.namespaces['SKOS'].altLabel,Literal(altLabel,'nl')))
         
         return source_cell_value_qname
     
@@ -300,14 +295,14 @@ class TabLinker(object):
                 self.log.debug("({},{}) {}/{}: \"{}\"". format(i,j,self.cellType, self.source_cell_name, self.source_cell.value))
                 
                 if (self.cellType == 'HierarchicalRowHeader') :
-#                    self.graph.add((self.SCOPE[self.source_cell_qname],RDF.type,self.D2S[self.cellType])) 
+#                    self.graph.add((self.SCOPE[self.source_cell_qname],RDF.type,self.namespaces['D2S'][self.cellType])) 
                     
                     #Always update headerlist even if it doesn't contain data
                     self.updateRowHierarchy(i, j)
                    
                 
                 if not self.isEmpty(i,j) :
-                    self.graph.add((self.SCOPE[self.source_cell_qname],RDF.type,self.D2S[self.cellType]))
+                    self.graph.add((self.SCOPE[self.source_cell_qname],RDF.type,self.namespaces['D2S'][self.cellType]))
                     
                     if self.cellType == 'Title' :
                         self.parseTitle(i, j)
@@ -380,15 +375,15 @@ class TabLinker(object):
         
             
         # Now that we know the source cell's value qname, add a d2s:isDimension link and the skos:Concept type
-        self.graph.add((self.SCOPE[self.source_cell_qname], self.D2S['isDimension'], self.SCOPE[self.source_cell_value_qname]))
-        self.graph.add((self.SCOPE[self.source_cell_qname], RDF.type, self.SKOS.Concept))
+        self.graph.add((self.SCOPE[self.source_cell_qname], self.namespaces['D2S']['isDimension'], self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_qname], RDF.type, self.namespaces['SKOS'].Concept))
         
         hierarchy_items = self.rowhierarchy[i].items()
         try: 
             parent_values = dict(hierarchy_items[:-1])
             self.log.debug(i,j, "Parent value: " + str(parent_values))
             parent_value_qname = self.getQName(parent_values)
-            self.graph.add((self.SCOPE[self.source_cell_value_qname], self.SKOS['broader'], self.SCOPE[parent_value_qname]))
+            self.graph.add((self.SCOPE[self.source_cell_value_qname], self.namespaces['SKOS']['broader'], self.SCOPE[parent_value_qname]))
         except :
             self.log.debug(i,j, "Top of hierarchy")
      
@@ -412,27 +407,27 @@ class TabLinker(object):
         # Get the QName of the HierarchicalRowHeader cell that this label belongs to, based on the rowhierarchy for this row (i)
         hierarchicalRowHeader_value_qname = self.getQName(self.rowhierarchy[i])
         
-        prefLabels = self.graph.objects(self.SCOPE[hierarchicalRowHeader_value_qname], self.SKOS.prefLabel)
+        prefLabels = self.graph.objects(self.SCOPE[hierarchicalRowHeader_value_qname], self.namespaces['SKOS'].prefLabel)
         for label in prefLabels :
             # If the hierarchicalRowHeader QName already has a preferred label, turn it into a skos:altLabel
-            self.graph.remove((self.SCOPE[hierarchicalRowHeader_value_qname],self.SKOS.prefLabel,label))
-            self.graph.add((self.SCOPE[hierarchicalRowHeader_value_qname],self.SKOS.altLabel,label))
+            self.graph.remove((self.SCOPE[hierarchicalRowHeader_value_qname],self.namespaces['SKOS'].prefLabel,label))
+            self.graph.add((self.SCOPE[hierarchicalRowHeader_value_qname],self.namespaces['SKOS'].altLabel,label))
             self.log.info("Turned skos:prefLabel {} for {} into a skos:altLabel".format(label, hierarchicalRowHeader_value_qname))
         
         # Add the value of the label cell as skos:prefLabel to the header cell
-        self.graph.add((self.SCOPE[hierarchicalRowHeader_value_qname], self.SKOS.prefLabel, Literal(self.source_cell.value, 'nl')))
+        self.graph.add((self.SCOPE[hierarchicalRowHeader_value_qname], self.namespaces['SKOS'].prefLabel, Literal(self.source_cell.value, 'nl')))
             
         # Record that this source_cell_qname is the label for the HierarchicalRowHeader cell
-        self.graph.add((self.SCOPE[self.source_cell_qname], self.D2S['isLabel'], self.SCOPE[hierarchicalRowHeader_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_qname], self.namespaces['D2S']['isLabel'], self.SCOPE[hierarchicalRowHeader_value_qname]))
     
     def parseRowHeader(self, i, j) :
         """
         Create relevant triples for the cell marked as RowHeader (i, j are row and column)
         """
         self.source_cell_value_qname = self.addValue(self.source_cell.value)
-        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimension'],self.SCOPE[self.source_cell_value_qname]))
-        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
-        self.graph.add((self.SCOPE[self.source_cell_qname], RDF.type, self.SKOS.Concept))
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.namespaces['D2S']['isDimension'],self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.namespaces['D2S']['Dimension']))
+        self.graph.add((self.SCOPE[self.source_cell_qname], RDF.type, self.namespaces['SKOS'].Concept))
         
         # Get the properties to use for the row headers
         try :
@@ -446,7 +441,7 @@ class TabLinker(object):
         # Use the column dimensions dictionary to find the objects of the d2s:dimension property
         try :
             for dim_qname in self.column_dimensions[j] :
-                self.graph.add((self.SCOPE[self.source_cell_value_qname],self.D2S['dimension'],self.SCOPE[dim_qname]))
+                self.graph.add((self.SCOPE[self.source_cell_value_qname],self.namespaces['D2S']['dimension'],self.SCOPE[dim_qname]))
         except KeyError :
             self.log.debug("({}.{}) No column dimension for cell".format(i,j))
         
@@ -457,9 +452,9 @@ class TabLinker(object):
         Create relevant triples for the cell marked as Header (i, j are row and column)
         """
         self.source_cell_value_qname = self.addValue(self.source_cell.value)   
-        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimension'],self.SCOPE[self.source_cell_value_qname]))
-        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
-        self.graph.add((self.SCOPE[self.source_cell_qname], RDF.type, self.SKOS.Concept))
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.namespaces['D2S']['isDimension'],self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.namespaces['D2S']['Dimension']))
+        self.graph.add((self.SCOPE[self.source_cell_qname], RDF.type, self.namespaces['SKOS'].Concept))
         
         # Add the value qname to the column_dimensions list for that column
         self.column_dimensions.setdefault(j,[]).append(self.source_cell_value_qname)
@@ -472,8 +467,8 @@ class TabLinker(object):
         """
         self.source_cell_value_qname = self.addValue(self.source_cell.value)
         
-        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isDimensionProperty'],self.SCOPE[self.source_cell_value_qname]))
-        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.QB['DimensionProperty']))
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.namespaces['D2S']['isDimensionProperty'],self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.namespaces['QB']['DimensionProperty']))
         self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,RDF['Property']))
         
         self.property_dimensions.setdefault(j,[]).append(self.source_cell_value_qname)
@@ -486,8 +481,8 @@ class TabLinker(object):
         """
 
         self.source_cell_value_qname = self.addValue(self.source_cell.value)
-        self.graph.add((self.SCOPE[self.sheet_qname], self.D2S['title'], self.SCOPE[self.source_cell_value_qname]))
-        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.D2S['Dimension']))
+        self.graph.add((self.SCOPE[self.sheet_qname], self.namespaces['D2S']['title'], self.SCOPE[self.source_cell_value_qname]))
+        self.graph.add((self.SCOPE[self.source_cell_value_qname],RDF.type,self.namespaces['D2S']['Dimension']))
         
         return
         
@@ -499,23 +494,23 @@ class TabLinker(object):
 
         observation = BNode()
         
-        self.graph.add((self.SCOPE[self.source_cell_qname],self.D2S['isObservation'], observation))
-        self.graph.add((observation,RDF.type,self.QB['Observation']))
-        self.graph.add((observation,self.QB['dataSet'],self.SCOPE[self.sheet_qname]))
-        self.graph.add((observation,self.D2S['populationSize'],Literal(self.source_cell.value)))
+        self.graph.add((self.SCOPE[self.source_cell_qname],self.namespaces['D2S']['isObservation'], observation))
+        self.graph.add((observation,RDF.type,self.namespaces['QB']['Observation']))
+        self.graph.add((observation,self.namespaces['QB']['dataSet'],self.SCOPE[self.sheet_qname]))
+        self.graph.add((observation,self.namespaces['D2S']['populationSize'],Literal(self.source_cell.value)))
         
         # Use the row dimensions dictionary to find the properties that link data values to row headers
         try :
             for (dim_qname, properties) in self.row_dimensions[i] :
                 for p in properties:
-                    self.graph.add((observation,self.D2S[p],self.SCOPE[dim_qname]))
+                    self.graph.add((observation,self.namespaces['D2S'][p],self.SCOPE[dim_qname]))
         except KeyError :
             self.log.debug("({}.{}) No row dimension for cell".format(i,j))
         
         # Use the column dimensions dictionary to find the objects of the d2s:dimension property
         try :
             for dim_qname in self.column_dimensions[j] :
-                self.graph.add((observation,self.D2S['dimension'],self.SCOPE[dim_qname]))
+                self.graph.add((observation,self.namespaces['D2S']['dimension'],self.SCOPE[dim_qname]))
         except KeyError :
             self.log.debug("({}.{}) No column dimension for cell".format(i,j))
 
