@@ -126,7 +126,7 @@ class TabLinker(object):
         Returns:
         String -- The type of this field. In case none is found, 'unknown'
         """
-        typematch = re.search('D2S\s(.*)',style)
+        typematch = re.search('TabLink\s(.*)',style)
         if typematch :
             cellType = typematch.group(1)
         else :
