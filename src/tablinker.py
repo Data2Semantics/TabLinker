@@ -94,7 +94,7 @@ class TabLinker(object):
     def setScope(self, fileBasename):
         """Set the default namespace and base for all URIs of the current workbook"""
         self.fileBasename = fileBasename
-        scopeNamespace = 'http://www.data2semantics.org/data/'+fileBasename+'/'
+        scopeNamespace = self.config.get('namespaces','defaultNamespacePrefix') + fileBasename + '/'
         
         self.log.debug('Adding namespace for {0}: {1}'.format(fileBasename, scopeNamespace))
         
