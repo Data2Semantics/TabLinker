@@ -82,8 +82,9 @@ class TabLinker(object):
         self.graph.add((self.namespaces['d2s']['populationSize'], RDF.type, self.namespaces['qb']['MeasureProperty']))
         self.graph.add((self.namespaces['d2s']['populationSize'], RDFS.label, Literal('Population Size','en')))
         self.graph.add((self.namespaces['d2s']['populationSize'], RDFS.label, Literal('Populatie grootte','nl')))
-        self.graph.add((self.namespaces['d2s']['populationSize'], RDFS.range, XSD.decimal))
-        
+        if len(config.get('literalTypes', 'dataCell')) > 0 :
+            self.graph.add((self.namespaces['d2s']['populationSize'], RDFS.range, Namespace(config.get('literalTypes', 'dataCell'))))
+            
         self.graph.add((self.namespaces['d2s']['dimension'], RDF.type, self.namespaces['qb']['DimensionProperty']))
         
         self.graph.add((self.namespaces['d2s']['label'], RDF.type, RDF['Property']))
