@@ -29,7 +29,7 @@ sys.setdefaultencoding("latin-1") #@UndefinedVariable
 
 
 class TabLinker(object):
-    
+    defaultNamespacePrefix = 'http://www.data2semantics.org/data/'
     namespaces = {
       'dcterms':Namespace('http://purl.org/dc/terms/'), 
       'skos':Namespace('http://www.w3.org/2004/02/skos/core#'), 
@@ -79,20 +79,37 @@ class TabLinker(object):
             self.graph.namespace_manager.bind(namespace, self.namespaces[namespace])
         
         self.log.debug('Adding some schema information (dimension and measure properties) ')
-        self.graph.add((self.namespaces['d2s']['populationSize'], RDF.type, self.namespaces['qb']['MeasureProperty']))
-        self.graph.add((self.namespaces['d2s']['populationSize'], RDFS.label, Literal('Population Size','en')))
-        self.graph.add((self.namespaces['d2s']['populationSize'], RDFS.label, Literal('Populatie grootte','nl')))
-        if len(config.get('literalTypes', 'dataCell')) > 0 :
-            self.graph.add((self.namespaces['d2s']['populationSize'], RDFS.range, Namespace(config.get('literalTypes', 'dataCell'))))
+        self.addDataCellProperty()
+        
             
         self.graph.add((self.namespaces['d2s']['dimension'], RDF.type, self.namespaces['qb']['DimensionProperty']))
         
         self.graph.add((self.namespaces['d2s']['label'], RDF.type, RDF['Property']))
     
+    def addDataCellProperty(self):
+        """Add definition of data cell resource to graph"""
+        if len(config.get('dataCell', 'propertyName')) > 0 :
+            self.dataCellPropertyName = config.get('dataCell', 'propertyName')
+        else :
+            self.dataCellPropertyName = 'hasValue'
+        
+        self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDF.type, self.namespaces['qb']['MeasureProperty']))
+        
+        #Take labels from config
+        if len(config.get('dataCell', 'labels')) > 0 :
+            labels = config.get('dataCell', 'labels').split(':::')
+            for label in labels :
+                labelProperties = label.split('-->')
+                if len(labelProperties[0]) > 0 and len(labelProperties[1]) > 0 :
+                    self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDFS.label, Literal(labelProperties[1],labelProperties[0])))
+                    
+        if len(config.get('dataCell', 'literalType')) > 0 :
+            self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDFS.range, Namespace(config.get('dataCell', 'literalType'))))
+            
     def setScope(self, fileBasename):
         """Set the default namespace and base for all URIs of the current workbook"""
         self.fileBasename = fileBasename
-        scopeNamespace = self.config.get('namespaces','defaultNamespacePrefix') + fileBasename + '/'
+        scopeNamespace = self.defaultNamespacePrefix + fileBasename + '/'
         
         self.log.debug('Adding namespace for {0}: {1}'.format(fileBasename, scopeNamespace))
         
@@ -505,7 +522,7 @@ class TabLinker(object):
         self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['isObservation'], observation))
         self.graph.add((observation,RDF.type,self.namespaces['qb']['Observation']))
         self.graph.add((observation,self.namespaces['qb']['dataSet'],self.namespaces['scope'][self.sheet_qname]))
-        self.graph.add((observation,self.namespaces['d2s']['populationSize'],Literal(self.source_cell.value)))
+        self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(self.source_cell.value)))
         
         # Use the row dimensions dictionary to find the properties that link data values to row headers
         try :
