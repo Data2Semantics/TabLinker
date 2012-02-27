@@ -12,7 +12,7 @@ from xlutils.copy import copy
 from xlutils.styles import Styles
 from xlrd import open_workbook, XL_CELL_EMPTY, XL_CELL_BLANK, cellname
 import glob
-from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, XSD, BNode
+from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, BNode
 import re
 from ConfigParser import SafeConfigParser
 import urllib
@@ -138,7 +138,7 @@ class TabLinker(object):
     ### 
          
     def getType(self, style):
-        """Get type for a given excel style. Style name must be prefixed by 'TabLink '
+        """Get type for a given excel style. Style name must be prefixed by 'TL '
     
         Arguments:
         style -- Style (string) to check type for
@@ -146,7 +146,7 @@ class TabLinker(object):
         Returns:
         String -- The type of this field. In case none is found, 'unknown'
         """
-        typematch = re.search('TabLink\s(.*)',style)
+        typematch = re.search('TL\s(.*)',style)
         if typematch :
             cellType = typematch.group(1)
         else :
@@ -319,7 +319,7 @@ class TabLinker(object):
      
                 self.log.debug("({},{}) {}/{}: \"{}\"". format(i,j,self.cellType, self.source_cell_name, self.source_cell.value))
                 
-                if (self.cellType == 'HierarchicalRowHeader') :
+                if (self.cellType == 'HRowHeader') :
 #                    self.graph.add((self.namespaces['scope'][self.source_cell_qname],RDF.type,self.namespaces['d2s'][self.cellType])) 
                     
                     #Always update headerlist even if it doesn't contain data
@@ -332,8 +332,8 @@ class TabLinker(object):
                     if self.cellType == 'Title' :
                         self.parseTitle(i, j)
     
-                    elif self.cellType == 'Property' :
-                        self.parseProperty(i, j)
+                    elif self.cellType == 'RowProperty' :
+                        self.parseRowProperty(i, j)
                                            
                     elif self.cellType == 'ColHeader' :
                         self.parseColHeader(i, j)
@@ -341,11 +341,11 @@ class TabLinker(object):
                     elif self.cellType == 'RowHeader' :
                         self.parseRowHeader(i, j)
                     
-                    elif self.cellType == 'HierarchicalRowHeader' :
+                    elif self.cellType == 'HRowHeader' :
                         self.parseHierarchicalRowHeader(i, j)
                          
-                    elif self.cellType == 'Label' :
-                        self.parseLabel(i, j)
+                    elif self.cellType == 'RowLabel' :
+                        self.parseRowLabel(i, j)
                         
                     elif self.cellType == 'Data' :
                         self.parseData(i, j)
@@ -422,12 +422,12 @@ class TabLinker(object):
 
         self.row_dimensions.setdefault(i, []).append((self.source_cell_value_qname, properties))
 
-    def parseLabel(self, i, j):
+    def parseRowLabel(self, i, j):
         """
         Create relevant triples for the cell marked as Label (i, j are row and column)
         """  
         
-        self.log.debug("Parsing Label")
+        self.log.debug("Parsing Row Label")
         
         # Get the QName of the HierarchicalRowHeader cell that this label belongs to, based on the rowhierarchy for this row (i)
         hierarchicalRowHeader_value_qname = self.getQName(self.rowhierarchy[i])
@@ -486,7 +486,7 @@ class TabLinker(object):
 
         return
     
-    def parseProperty(self, i, j) :
+    def parseRowProperty(self, i, j) :
         """
         Create relevant triples for the cell marked as Property (i, j are row and column)
         """

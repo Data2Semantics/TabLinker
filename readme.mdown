@@ -21,15 +21,15 @@ TabLinker takes annotated Excel files (found using the `srcMask` option in the [
 
 Annotations in the Excel file should be done using the built-in **style** functionality of Excel (you can specify these by hand). TabLinker currently recognises seven styles:
 
-* **TabLink Title** - The cell containing the title of a sheet
-* **TabLink Data** - A cell that contains data, e.g. a number for the population size 
-* **TabLink ColHeader** - Used for the headers of columns
-* **TabLink RowHeader** - Used for row headers
-* **TabLink HierarchicalRowHeader** - Used for multi-column row headers with subsumption/taxonomic relations between the values of the columns
-* **TabLink Property** - Typically used for the header cells directly above RowHeader or HierarchicalRowHeader cells, cell values are the properties that relate Data cells to RowHeader and HierarchicalRowHeader cells.
-* **TabLink Label** - Used for cells that contain a label for one of the HierarchicalRowHeader cells.
+* **TL Title** - The cell containing the title of a sheet
+* **TL Data** - A cell that contains data, e.g. a number for the population size 
+* **TL ColHeader** - Used for the headers of columns
+* **TL RowHeader** - Used for row headers
+* **TL HRowHeader** - Hierarchical header, used for multi-column row headers with subsumption/taxonomic relations between the values of the columns
+* **TL RowProperty** - Typically used for the header cells directly above RowHeader or HierarchicalRowHeader cells. Cell values are the properties that relate Data cells to RowHeader and HierarchicalRowHeader cells.
+* **TL RowLabel** - Used for cells that contain a label for one of the HierarchicalRowHeader cells in the same row.
 
-An eight style, **TabLink Metadata**, is currently ignored (See #3).
+An eight style, **TL Metadata**, is currently ignored (See #3).
 
 An [example of such an annotated Excel file](http://github.com/Data2Semantics/TabLinker/tree/master/input/BRT_1889_02_T1_marked.xls) is provided in the [input](http://github.com/Data2Semantics/TabLinker/tree/master/input/) directory. There are ways to import the styles defined in that file into your own Excel files.
 
