@@ -17,6 +17,7 @@ import re
 from ConfigParser import SafeConfigParser
 import urllib
 import logging
+import os
 #set default encoding to latin-1, to avoid encode/decode errors for special chars
 #(laurens: actually don't know why encoding/decoding is not sufficient)
 #(rinke: this is a specific requirment for the xlrd and xlutils packages)
@@ -55,7 +56,8 @@ class TabLinker(object):
         self.initGraph()
         
         self.log.debug('Setting Scope')
-        basename = re.search('.*/(.*?)\.xls',filename).group(1)
+        basename = os.path.basename(filename)
+        basename = re.search('(.*)\.xls',basename).group(1)
         self.setScope(basename)
         
         self.log.debug('Loading Excel file {0}.'.format(filename))
@@ -590,7 +592,12 @@ if __name__ == '__main__':
         turtleFile = targetFolder + tLinker.fileBasename +'.ttl'
         logging.info("Serializing graph to file {}".format(turtleFile))
         try :
-            tLinker.graph.serialize(turtleFile, format='turtle')
+            fileWrite = open(turtleFile, "w")
+            #Avoid rdflib writing the graph itself, as this is buggy in windows.
+            #Instead, retrieve string and then write (probably more memory intensive...)
+            turtle = tLinker.graph.serialize(None, format='turtle')
+            fileWrite.writelines(turtle)
+            fileWrite.close()
         except :
             logging.error("Whoops! Something went wrong in serializing to output file")
             logging.info(sys.exc_info())
