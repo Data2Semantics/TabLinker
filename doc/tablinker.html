@@ -8,7 +8,7 @@
 <td valign=bottom>&nbsp;<br>
 <font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>tablinker</strong></big></big></font></td
 ><td align=right valign=bottom
-><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/Users/hoekstra/projects/TabLinker/src/tablinker.py">/Users/hoekstra/projects/TabLinker/src/tablinker.py</a></font></td></tr></table>
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/lrd900/code/tablinker/src/tablinker.py">/home/lrd900/code/tablinker/src/tablinker.py</a></font></td></tr></table>
     <p><tt>Created&nbsp;on&nbsp;19&nbsp;Sep&nbsp;2011<br>
 Modified&nbsp;on&nbsp;31&nbsp;Jan&nbsp;2012<br>
 &nbsp;<br>
@@ -24,9 +24,10 @@ License:&nbsp;&nbsp;&nbsp;&nbsp;LGPLv3</tt></p>
 <tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="glob.html">glob</a><br>
 <a href="logging.html">logging</a><br>
-</td><td width="25%" valign=top><a href="re.html">re</a><br>
-<a href="sys.html">sys</a><br>
-</td><td width="25%" valign=top><a href="urllib.html">urllib</a><br>
+</td><td width="25%" valign=top><a href="os.html">os</a><br>
+<a href="re.html">re</a><br>
+</td><td width="25%" valign=top><a href="sys.html">sys</a><br>
+<a href="urllib.html">urllib</a><br>
 </td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
@@ -50,11 +51,14 @@ License:&nbsp;&nbsp;&nbsp;&nbsp;LGPLv3</tt></p>
     
 <tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="TabLinker-__init__"><strong>__init__</strong></a>(self, filename, level<font color="#909090">=10</font>)</dt><dd><tt><a href="#TabLinker">TabLinker</a>&nbsp;constructor<br>
+<dl><dt><a name="TabLinker-__init__"><strong>__init__</strong></a>(self, filename, config, level<font color="#909090">=10</font>)</dt><dd><tt><a href="#TabLinker">TabLinker</a>&nbsp;constructor<br>
 &nbsp;<br>
 Keyword&nbsp;arguments:<br>
 filename&nbsp;--&nbsp;String&nbsp;containing&nbsp;the&nbsp;name&nbsp;of&nbsp;the&nbsp;current&nbsp;Excel&nbsp;file&nbsp;being&nbsp;examined<br>
+config&nbsp;--&nbsp;Configuration&nbsp;<a href="__builtin__.html#object">object</a>,&nbsp;loaded&nbsp;from&nbsp;.ini&nbsp;file<br>
 level&nbsp;--&nbsp;A&nbsp;logging&nbsp;level&nbsp;as&nbsp;defined&nbsp;in&nbsp;the&nbsp;logging&nbsp;module</tt></dd></dl>
+
+<dl><dt><a name="TabLinker-addDataCellProperty"><strong>addDataCellProperty</strong></a>(self)</dt><dd><tt>Add&nbsp;definition&nbsp;of&nbsp;data&nbsp;cell&nbsp;resource&nbsp;to&nbsp;graph</tt></dd></dl>
 
 <dl><dt><a name="TabLinker-addValue"><strong>addValue</strong></a>(self, source_cell_value, altLabel<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;"value"&nbsp;+&nbsp;optional&nbsp;label&nbsp;to&nbsp;the&nbsp;graph&nbsp;for&nbsp;a&nbsp;cell&nbsp;in&nbsp;the&nbsp;source&nbsp;Excel&nbsp;sheet.&nbsp;The&nbsp;value&nbsp;is&nbsp;typically&nbsp;the&nbsp;value&nbsp;stored&nbsp;in&nbsp;the&nbsp;source&nbsp;cell&nbsp;itself,&nbsp;but&nbsp;may&nbsp;also&nbsp;be&nbsp;a&nbsp;copy&nbsp;of&nbsp;another&nbsp;cell&nbsp;(e.g.&nbsp;in&nbsp;the&nbsp;case&nbsp;of&nbsp;'idem.').<br>
 &nbsp;<br>
@@ -64,7 +68,7 @@ source_cell_value&nbsp;--&nbsp;The&nbsp;string&nbsp;representing&nbsp;the&nbsp;v
 Returns:<br>
 source_cell_value_qname&nbsp;--&nbsp;a&nbsp;valid&nbsp;QName&nbsp;for&nbsp;the&nbsp;value&nbsp;of&nbsp;the&nbsp;source&nbsp;cell</tt></dd></dl>
 
-<dl><dt><a name="TabLinker-doLink"><strong>doLink</strong></a>(self)</dt></dl>
+<dl><dt><a name="TabLinker-doLink"><strong>doLink</strong></a>(self)</dt><dd><tt>Start&nbsp;tablinker&nbsp;for&nbsp;all&nbsp;sheets&nbsp;in&nbsp;workbook</tt></dd></dl>
 
 <dl><dt><a name="TabLinker-getQName"><strong>getQName</strong></a>(self, names)</dt><dd><tt>Create&nbsp;a&nbsp;valid&nbsp;QName&nbsp;from&nbsp;a&nbsp;string&nbsp;or&nbsp;dictionary&nbsp;of&nbsp;names<br>
 &nbsp;<br>
@@ -74,7 +78,7 @@ names&nbsp;--&nbsp;Either&nbsp;dictionary&nbsp;of&nbsp;names&nbsp;or&nbsp;string
 Returns:<br>
 qname&nbsp;--&nbsp;a&nbsp;valid&nbsp;QName&nbsp;for&nbsp;the&nbsp;dictionary&nbsp;or&nbsp;string</tt></dd></dl>
 
-<dl><dt><a name="TabLinker-getType"><strong>getType</strong></a>(self, style)</dt><dd><tt>Get&nbsp;type&nbsp;for&nbsp;a&nbsp;given&nbsp;excel&nbsp;style.&nbsp;Style&nbsp;name&nbsp;must&nbsp;be&nbsp;prefixed&nbsp;by&nbsp;'D2S&nbsp;'<br>
+<dl><dt><a name="TabLinker-getType"><strong>getType</strong></a>(self, style)</dt><dd><tt>Get&nbsp;type&nbsp;for&nbsp;a&nbsp;given&nbsp;excel&nbsp;style.&nbsp;Style&nbsp;name&nbsp;must&nbsp;be&nbsp;prefixed&nbsp;by&nbsp;'TL&nbsp;'<br>
 &nbsp;<br>
 Arguments:<br>
 style&nbsp;--&nbsp;Style&nbsp;(string)&nbsp;to&nbsp;check&nbsp;type&nbsp;for<br>
@@ -119,23 +123,31 @@ Returns:<br>
 true&nbsp;&nbsp;--&nbsp;if&nbsp;the&nbsp;row&nbsp;is&nbsp;empty<br>
 false&nbsp;--&nbsp;if&nbsp;the&nbsp;row&nbsp;is&nbsp;not&nbsp;empty</tt></dd></dl>
 
-<dl><dt><a name="TabLinker-parseData"><strong>parseData</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Data&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
+<dl><dt><a name="TabLinker-parseColHeader"><strong>parseColHeader</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Header&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
 
-<dl><dt><a name="TabLinker-parseHeader"><strong>parseHeader</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Header&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
+<dl><dt><a name="TabLinker-parseData"><strong>parseData</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Data&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
 
 <dl><dt><a name="TabLinker-parseHierarchicalRowHeader"><strong>parseHierarchicalRowHeader</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;HierarchicalRowHeader&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
 
-<dl><dt><a name="TabLinker-parseLabel"><strong>parseLabel</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Label&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
-
-<dl><dt><a name="TabLinker-parseProperty"><strong>parseProperty</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Property&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
-
 <dl><dt><a name="TabLinker-parseRowHeader"><strong>parseRowHeader</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;RowHeader&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
+
+<dl><dt><a name="TabLinker-parseRowLabel"><strong>parseRowLabel</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Label&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
+
+<dl><dt><a name="TabLinker-parseRowProperty"><strong>parseRowProperty</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Property&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
 
 <dl><dt><a name="TabLinker-parseSheet"><strong>parseSheet</strong></a>(self)</dt><dd><tt>Parses&nbsp;the&nbsp;currently&nbsp;selected&nbsp;sheet&nbsp;in&nbsp;the&nbsp;workbook,&nbsp;takes&nbsp;no&nbsp;arguments.&nbsp;Iterates&nbsp;over&nbsp;all&nbsp;cells&nbsp;in&nbsp;the&nbsp;Excel&nbsp;sheet&nbsp;and&nbsp;produces&nbsp;relevant&nbsp;RDF&nbsp;Triples.</tt></dd></dl>
 
 <dl><dt><a name="TabLinker-parseTitle"><strong>parseTitle</strong></a>(self, i, j)</dt><dd><tt>Create&nbsp;relevant&nbsp;triples&nbsp;for&nbsp;the&nbsp;cell&nbsp;marked&nbsp;as&nbsp;Title&nbsp;(i,&nbsp;j&nbsp;are&nbsp;row&nbsp;and&nbsp;column)</tt></dd></dl>
 
-<dl><dt><a name="TabLinker-setScope"><strong>setScope</strong></a>(self, scope)</dt><dd><tt>Set&nbsp;the&nbsp;default&nbsp;namespace&nbsp;and&nbsp;base&nbsp;for&nbsp;all&nbsp;URIs&nbsp;of&nbsp;the&nbsp;current&nbsp;workbook</tt></dd></dl>
+<dl><dt><a name="TabLinker-processString"><strong>processString</strong></a>(self, string)</dt><dd><tt>Remove&nbsp;illegal&nbsp;characters&nbsp;(comma,&nbsp;brackets,&nbsp;etc)&nbsp;from&nbsp;string,&nbsp;and&nbsp;replace&nbsp;it&nbsp;with&nbsp;underscore.&nbsp;Useful&nbsp;for&nbsp;URIs<br>
+&nbsp;<br>
+Arguments:<br>
+string&nbsp;--&nbsp;The&nbsp;string&nbsp;representing&nbsp;the&nbsp;value&nbsp;of&nbsp;the&nbsp;source&nbsp;cell<br>
+&nbsp;<br>
+Returns:<br>
+processedString&nbsp;--&nbsp;The&nbsp;processed&nbsp;string</tt></dd></dl>
+
+<dl><dt><a name="TabLinker-setScope"><strong>setScope</strong></a>(self, fileBasename)</dt><dd><tt>Set&nbsp;the&nbsp;default&nbsp;namespace&nbsp;and&nbsp;base&nbsp;for&nbsp;all&nbsp;URIs&nbsp;of&nbsp;the&nbsp;current&nbsp;workbook</tt></dd></dl>
 
 <dl><dt><a name="TabLinker-updateRowHierarchy"><strong>updateRowHierarchy</strong></a>(self, i, j)</dt><dd><tt>Build&nbsp;up&nbsp;lists&nbsp;for&nbsp;hierarchical&nbsp;row&nbsp;headers.&nbsp;Cells&nbsp;marked&nbsp;as&nbsp;hierarchical&nbsp;row&nbsp;header&nbsp;are&nbsp;often&nbsp;empty&nbsp;meaning&nbsp;that&nbsp;their&nbsp;intended&nbsp;value&nbsp;is&nbsp;stored&nbsp;somewhere&nbsp;else&nbsp;in&nbsp;the&nbsp;Excel&nbsp;sheet.<br>
 &nbsp;<br>
@@ -156,15 +168,9 @@ Data descriptors defined here:<br>
 </dl>
 <hr>
 Data and other attributes defined here:<br>
-<dl><dt><strong>D2S</strong> = Namespace('http://www.data2semantics.org/core/')</dl>
+<dl><dt><strong>defaultNamespacePrefix</strong> = 'http://www.data2semantics.org/data/'</dl>
 
-<dl><dt><strong>DCTERMS</strong> = Namespace('http:/g/purl.org/dc/terms/')</dl>
-
-<dl><dt><strong>OWL</strong> = Namespace('http://www.w3.org/2002/07/owl#')</dl>
-
-<dl><dt><strong>QB</strong> = Namespace('http://purl.org/linked-data/cube#')</dl>
-
-<dl><dt><strong>SKOS</strong> = Namespace('http://www.w3.org/2004/02/skos/core#')</dl>
+<dl><dt><strong>namespaces</strong> = {'d2s': Namespace('http://www.data2semantics.org/core/'), 'dcterms': Namespace('http://purl.org/dc/terms/'), 'owl': Namespace('http://www.w3.org/2002/07/owl#'), 'qb': Namespace('http://purl.org/linked-data/cube#'), 'skos': Namespace('http://www.w3.org/2004/02/skos/core#')}</dl>
 
 </td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
@@ -176,6 +182,5 @@ Data and other attributes defined here:<br>
 <td width="100%"><strong>RDF</strong> = rdf.namespace.ClosedNamespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#')<br>
 <strong>RDFS</strong> = rdf.namespace.ClosedNamespace('http://www.w3.org/2000/01/rdf-schema#')<br>
 <strong>XL_CELL_BLANK</strong> = 6<br>
-<strong>XL_CELL_EMPTY</strong> = 0<br>
-<strong>XSD</strong> = Namespace('http://www.w3.org/2001/XMLSchema#')</td></tr></table>
+<strong>XL_CELL_EMPTY</strong> = 0</td></tr></table>
 </body></html>
