@@ -10,7 +10,7 @@ License:    LGPLv3
 from xlutils.margins import number_of_good_cols, number_of_good_rows
 from xlutils.copy import copy
 from xlutils.styles import Styles
-from xlrd import open_workbook, XL_CELL_EMPTY, XL_CELL_BLANK, cellname
+from xlrd import open_workbook, XL_CELL_EMPTY, XL_CELL_BLANK, cellname, colname
 import glob
 from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, BNode
 import re
@@ -25,8 +25,6 @@ import os
 import sys
 reload(sys)
 sys.setdefaultencoding("latin-1") #@UndefinedVariable
-
-
 
 
 class TabLinker(object):
@@ -318,19 +316,19 @@ class TabLinker(object):
                 self.style = self.styles[self.source_cell].name
                 self.cellType = self.getType(self.style)
                 self.source_cell_qname = self.getQName(self.source_cell_name)
-     
+                
                 self.log.debug("({},{}) {}/{}: \"{}\"". format(i,j,self.cellType, self.source_cell_name, self.source_cell.value))
                 
                 if (self.cellType == 'HRowHeader') :
-#                    self.graph.add((self.namespaces['scope'][self.source_cell_qname],RDF.type,self.namespaces['d2s'][self.cellType])) 
-                    
                     #Always update headerlist even if it doesn't contain data
                     self.updateRowHierarchy(i, j)
                    
                 
                 if not self.isEmpty(i,j) :
                     self.graph.add((self.namespaces['scope'][self.source_cell_qname],RDF.type,self.namespaces['d2s'][self.cellType]))
-                    
+                    self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['col'],Literal(colname(j))))
+                    self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['row'],Literal(i+1)))
+                    #self.graph.add((self.namespaces['scope'][self.source_cell_qname] isrow row
                     if self.cellType == 'Title' :
                         self.parseTitle(i, j)
     
@@ -550,7 +548,6 @@ if __name__ == '__main__':
     Start the TabLinker for every file specified in the configuration file (../config.ini)
     """
     logging.basicConfig(level=logging.INFO)
-    
     logging.info('Reading configuration file')
     
     config = SafeConfigParser()
@@ -566,7 +563,7 @@ if __name__ == '__main__':
     except :
         logging.error("Could not find configuration file, using default settings!")
         srcMask = '../input/*_marked.xls'
-        targetFolder = '../output/'
+        targetFolder = config.get('paths', 'targetFolder')
         logLevel = logging.DEBUG
         
     logging.basicConfig(level=logLevel)
@@ -595,7 +592,7 @@ if __name__ == '__main__':
             fileWrite = open(turtleFile, "w")
             #Avoid rdflib writing the graph itself, as this is buggy in windows.
             #Instead, retrieve string and then write (probably more memory intensive...)
-            turtle = tLinker.graph.serialize(None, format='turtle')
+            turtle = tLinker.graph.serialize(None, format=config.get('general', 'format'))
             fileWrite.writelines(turtle)
             fileWrite.close()
         except :
