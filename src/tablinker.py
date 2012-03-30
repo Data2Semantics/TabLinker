@@ -326,8 +326,9 @@ class TabLinker(object):
                 
                 if not self.isEmpty(i,j) :
                     self.graph.add((self.namespaces['scope'][self.source_cell_qname],RDF.type,self.namespaces['d2s'][self.cellType]))
-                    self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['col'],Literal(colname(j))))
-                    self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['row'],Literal(i+1)))
+                    self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['cell'],Literal(self.source_cell_name)))
+                    #self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['col'],Literal(colname(j))))
+                    #self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['row'],Literal(i+1)))
                     #self.graph.add((self.namespaces['scope'][self.source_cell_qname] isrow row
                     if self.cellType == 'Title' :
                         self.parseTitle(i, j)

@@ -45,7 +45,6 @@ class UnTabLinker(object):
         level -- A logging level as defined in the logging module
         """
         self.config = config
-        
         self.log = logging.getLogger("TabLinker")
         self.log.setLevel(level)
         
@@ -68,20 +67,24 @@ class UnTabLinker(object):
         """
         #Get the row IDs from the RDF set
         queryResult = self.graph.query(
-            """SELECT DISTINCT ?row
+            """SELECT DISTINCT ?cell ?value
                WHERE {
-                  [] <http://www.data2semantics.org/core/row> ?row .
-               } ORDER BY ?row""",
+                  ?node <http://www.data2semantics.org/core/cell> ?cell .
+                  ?node <http://www.data2semantics.org/core/value> ?value .
+               }""",
             #Can't use prefix d2s. This produces parsing error (event though namespace is defined).
             #A bug in the query parser I guess
+            #also, dont use [] in this query processor...
             initNs=self.namespaces
         )
         if (len(queryResult) == 0):
             self.log.error("No rows found in rdf set. Exiting...")
             quit()
-        #Loop through row ids, and for each row, retrieve cols and values
+        #Loop through cells and add values to excel
         for resultRow in queryResult.result:
-            self.addRowToXLS(int(resultRow[0]))
+            cell, value = resultRow
+            col, row = self.cellname2index(cell)
+            self.sheet.write(row, col, value)
         
         
     def addRowToXLS(self, rowID):
@@ -89,7 +92,7 @@ class UnTabLinker(object):
             """SELECT DISTINCT ?col ?value
                WHERE {
                  ?node <http://www.data2semantics.org/core/row> """ + str(rowID) + """ .
-                 ?node <http://www.data2semantics.org/core/value> ?value .
+                 ?node 
                  ?node <http://www.data2semantics.org/core/col> ?col .
                } LIMIT 10""",
             #Can't use prefix d2s. This produces parsing error (event though namespace is defined).
@@ -101,8 +104,14 @@ class UnTabLinker(object):
             col, value = resultRow
             self.sheet.write(rowID - 1, self.excel2num(col), value)
             
-    def excel2num(self, x): 
-        return reduce(lambda s,a:s*26+ord(a)-ord('A'), x, 0)
+    def cellname2index(self, cellname): 
+        matches = re.search('([A-Z]*)([0-9]*)',cellname)
+        if (len(matches.groups()) != 2 ):
+            logging.error("Failed to parse cell name {0}. Exiting...".format(cellname))
+            quit()
+        col = reduce(lambda s,a:s*26+ord(a)-ord('A'), matches.group(1), 0)
+        row = int(matches.group(2)) - 1
+        return col,row 
 
 def checkArg() :
     """
