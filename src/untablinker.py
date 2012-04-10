@@ -67,11 +67,9 @@ class UnTabLinker(object):
         directory -- Directory to save files in
         """
         
-        #Get file names from dataset
-        
-        
-        
-        self.saveFile(directory, "filename")
+        #In the future, have a sparql query here to retrieve all files in this graph
+        #Not possible now, because tablinker doesnt explicitly store filename yet
+        self.saveFile(directory, "converted")
         
         
     
@@ -84,10 +82,11 @@ class UnTabLinker(object):
         
         #Retrieve sheets for this file
         
-        #Save sheet in file object
+        #In the future, have a sparql query here to retrieve all sheets for this file
+        #Not possible now, because tablinker doesnt explicitly store sheet name yet
         self.addSheetToXls("sheetname")
         
-        self.wbk.save(directory + basename + '.xls')
+        self.wbk.save(directory + filename + '.xls')
     
     def addSheetToXls(self, sheetName):
         """
