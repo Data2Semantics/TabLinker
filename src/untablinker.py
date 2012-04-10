@@ -16,6 +16,7 @@ from ConfigParser import SafeConfigParser
 import logging
 import os
 import sys
+import shutil
 try:
     import rdfextras#@UnusedImport
 except ImportError, e:
@@ -36,11 +37,11 @@ class UnTabLinker(object):
       'owl':Namespace('http://www.w3.org/2002/07/owl#')
     }
 
-    def __init__(self, filename, config, level = logging.DEBUG):
+    def __init__(self, directory, config, level = logging.DEBUG):
         """TabLinker constructor
         
         Keyword arguments:
-        filename -- String containing the name of the current Excel file being examined
+        directory -- String containing the name turtle file
         config -- Configuration object, loaded from .ini file
         level -- A logging level as defined in the logging module
         """
@@ -52,19 +53,48 @@ class UnTabLinker(object):
         self.log.debug('Loading and parsing file')
         self.graph.parse(filename, format=config.get('general', 'format'))
         
-        
         plugin.register('sparql', rdflib.query.Processor,'rdfextras.sparql.processor', 'Processor')
         plugin.register('sparql', rdflib.query.Result,'rdfextras.sparql.query', 'SPARQLQueryResult')
         
-        self.wbk = xlwt.Workbook()
-        #currently, we assume only 1 sheet per file
-        self.sheet = self.wbk.add_sheet('sheet 1')
+        
 
 
-    def convertToXls(self):
+    def saveFiles(self, directory):
         """
         Convert data in rdf to excel
+        
+        Keyword arguments:
+        directory -- Directory to save files in
         """
+        
+        #Get file names from dataset
+        
+        
+        
+        self.saveFile(directory, "filename")
+        
+        
+    
+    def saveFile(self, directory, filename):
+        """
+        Retrieve information from graph, and save file
+        """
+        self.wbk = xlwt.Workbook()
+        
+        
+        #Retrieve sheets for this file
+        
+        #Save sheet in file object
+        self.addSheetToXls("sheetname")
+        
+        self.wbk.save(directory + basename + '.xls')
+    
+    def addSheetToXls(self, sheetName):
+        """
+        Get values for this sheet, and store in excel object
+        """
+        self.sheet = self.wbk.add_sheet(sheetName)
+        
         #Get the row IDs from the RDF set
         queryResult = self.graph.query(
             """SELECT DISTINCT ?cell ?value
@@ -78,32 +108,15 @@ class UnTabLinker(object):
             initNs=self.namespaces
         )
         if (len(queryResult) == 0):
-            self.log.error("No rows found in rdf set. Exiting...")
-            quit()
+            self.log.error("No rows found for sheet {0}".format(sheetName))
+        
         #Loop through cells and add values to excel
         for resultRow in queryResult.result:
             cell, value = resultRow
             col, row = self.cellname2index(cell)
             self.sheet.write(row, col, value)
-        
-        
-    def addRowToXLS(self, rowID):
-        queryResult = self.graph.query(
-            """SELECT DISTINCT ?col ?value
-               WHERE {
-                 ?node <http://www.data2semantics.org/core/row> """ + str(rowID) + """ .
-                 ?node 
-                 ?node <http://www.data2semantics.org/core/col> ?col .
-               } LIMIT 10""",
-            #Can't use prefix d2s. This produces parsing error (event though namespace is defined).
-            #A bug in the query parser I guess
-            #Also, dont use [] in this query processor...
-            initNs=self.namespaces
-        )
-        for resultRow in queryResult.result:
-            col, value = resultRow
-            self.sheet.write(rowID - 1, self.excel2num(col), value)
             
+        
     def cellname2index(self, cellname): 
         matches = re.search('([A-Z]*)([0-9]*)',cellname)
         if (len(matches.groups()) != 2 ):
@@ -157,10 +170,18 @@ if __name__ == '__main__':
     logging.info("Found {0} files to convert.".format(len(files)))
     
     unLinker = UnTabLinker(filename, config, logLevel)
-    unLinker.convertToXls()
+    
     basename = os.path.basename(filename)
     basename = re.search('(.*)\.ttl',basename).group(1)
-    unLinker.wbk.save(config.get('paths', 'targetFolder') + basename + '.xls')
+    directory = config.get('paths', 'targetFolder') + basename + "/"
+    
+    if (os.path.isdir(directory)) :
+        logging.debug('Output dir {0} already exists. Deleting'.format(directory))
+        shutil.rmtree(directory)
+    logging.debug('Creating dir {0}'.format(directory))
+    os.makedirs(directory)
+    unLinker.saveFiles(directory)
+    
     
     logging.info("Done")
     
