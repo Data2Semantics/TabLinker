@@ -1,8 +1,8 @@
 """
 Created on 19 Sep 2011
-Modified on 31 Jan 2012
+Modified on 07 Sep 2012
 
-Authors:    Rinke Hoekstra, Laurens Rietveld
+Authors:    Rinke Hoekstra, Laurens Rietveld, Albert Meronyo-Penyuela
 Copyright:  VU University Amsterdam, 2011/2012
 License:    LGPLv3
 
@@ -12,12 +12,14 @@ from xlutils.copy import copy
 from xlutils.styles import Styles
 from xlrd import open_workbook, XL_CELL_EMPTY, XL_CELL_BLANK, cellname, colname
 import glob
-from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, BNode
+from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, BNode, URIRef
 import re
 from ConfigParser import SafeConfigParser
 import urllib
 import logging
 import os
+import time
+import datetime
 #set default encoding to latin-1, to avoid encode/decode errors for special chars
 #(laurens: actually don't know why encoding/decoding is not sufficient)
 #(rinke: this is a specific requirment for the xlrd and xlutils packages)
@@ -29,12 +31,19 @@ sys.setdefaultencoding("latin-1") #@UndefinedVariable
 
 class TabLinker(object):
     defaultNamespacePrefix = 'http://www.data2semantics.org/data/'
+    annotationsNamespacePrefix = 'http://www.data2semantics.org/annotations/'
     namespaces = {
       'dcterms':Namespace('http://purl.org/dc/terms/'), 
       'skos':Namespace('http://www.w3.org/2004/02/skos/core#'), 
       'd2s':Namespace('http://www.data2semantics.org/core/'), 
       'qb':Namespace('http://purl.org/linked-data/cube#'), 
       'owl':Namespace('http://www.w3.org/2002/07/owl#')
+    }
+    annotationNamespaces = {
+      'np':Namespace('http://www.nanopub.org/nschema#'),
+      'oa':Namespace('http://www.w3.org/ns/openannotation/core/'),
+      'xsd':Namespace('http://www.w3.org/2001/XMLSchema#'),
+      'dct':Namespace('http://purl.org/dc/terms/')
     }
 
     def __init__(self, filename, config, level = logging.DEBUG):
@@ -46,12 +55,13 @@ class TabLinker(object):
         level -- A logging level as defined in the logging module
         """
         self.config = config
+        self.filename = filename
         
         self.log = logging.getLogger("TabLinker")
         self.log.setLevel(level)
         
-        self.log.debug('Initializing Graph')
-        self.initGraph()
+        self.log.debug('Initializing Graphs')
+        self.initGraphs()
         
         self.log.debug('Setting Scope')
         basename = os.path.basename(filename)
@@ -68,20 +78,25 @@ class TabLinker(object):
         self.wb = copy(self.rb)
         
         
-    def initGraph(self):
-        """Initialize the graph, set default namespaces, and add schema information"""
+    def initGraphs(self):
+        """Initialize the graphs, set default namespaces, and add schema information"""
     
         self.graph = ConjunctiveGraph()
+        # Create a separate graph for annotations
+        self.annotationGraph = ConjunctiveGraph()
         
-        self.log.debug('Adding namespaces to graph')
-        # Bind namespaces to graph
+        self.log.debug('Adding namespaces to graphs')
+        # Bind namespaces to graphs
         for namespace in self.namespaces:
             self.graph.namespace_manager.bind(namespace, self.namespaces[namespace])
+
+        # Same for annotation graph
+        for namespace in self.annotationNamespaces:
+            self.annotationGraph.namespace_manager.bind(namespace, self.annotationNamespaces[namespace])
         
         self.log.debug('Adding some schema information (dimension and measure properties) ')
         self.addDataCellProperty()
-        
-            
+                    
         self.graph.add((self.namespaces['d2s']['dimension'], RDF.type, self.namespaces['qb']['DimensionProperty']))
         
         self.graph.add((self.namespaces['d2s']['label'], RDF.type, RDF['Property']))
@@ -111,10 +126,15 @@ class TabLinker(object):
         self.fileBasename = fileBasename
         scopeNamespace = self.defaultNamespacePrefix + fileBasename + '/'
         
+        # Annotations go to a different namespace
+        annotationScopeNamespace = self.annotationsNamespacePrefix + fileBasename + '/'
+        
         self.log.debug('Adding namespace for {0}: {1}'.format(fileBasename, scopeNamespace))
         
         self.namespaces['scope'] = Namespace(scopeNamespace)
+        self.annotationNamespaces['scope'] = Namespace(annotationScopeNamespace)
         self.graph.namespace_manager.bind('', self.namespaces['scope'])
+        self.annotationGraph.namespace_manager.bind('', self.annotationNamespaces['scope'])
         
     def doLink(self):
         """Start tablinker for all sheets in workbook"""
@@ -306,11 +326,15 @@ class TabLinker(object):
         self.property_dimensions = {}
         self.row_dimensions = {}
         self.rowhierarchy = {}
+
+        # Get dictionary of annotations
+        self.annotations = self.r_sheet.cell_note_map
         
         for i in range(0,self.rowns):
             self.rowhierarchy[i] = {}
             
             for j in range(0, self.colns):
+                # Parse cell data
                 self.source_cell = self.r_sheet.cell(i,j)
                 self.source_cell_name = cellname(i,j)
                 self.style = self.styles[self.source_cell].name
@@ -318,7 +342,12 @@ class TabLinker(object):
                 self.source_cell_qname = self.getQName(self.source_cell_name)
                 
                 self.log.debug("({},{}) {}/{}: \"{}\"". format(i,j,self.cellType, self.source_cell_name, self.source_cell.value))
-                
+
+                # Parse annotation (if any)
+                if self.config.get('annotations', 'enabled') == "1":
+                    if (i,j) in self.annotations:
+                        self.parseAnnotation(i, j)
+
                 if (self.cellType == 'HRowHeader') :
                     #Always update headerlist even if it doesn't contain data
                     self.updateRowHierarchy(i, j)
@@ -540,6 +569,71 @@ class TabLinker(object):
         except KeyError :
             self.log.debug("({}.{}) No column dimension for cell".format(i,j))
 
+    def parseAnnotation(self, i, j) :
+        """
+        Create relevant triples for the annotation attached to cell (i, j)
+        """
+
+        if self.config.get('annotations', 'model') == 'oa':
+            # Create triples according to Open Annotation model
+
+            body = BNode()
+
+            self.annotationGraph.add((self.annotationNamespaces['scope'][self.source_cell_qname], 
+                                      RDF.type, 
+                                      self.annotationNamespaces['oa']['Annotation']
+                                      ))
+            self.annotationGraph.add((self.annotationNamespaces['scope'][self.source_cell_qname], 
+                                      self.annotationNamespaces['oa']['hasBody'], 
+                                      body
+                                      ))
+            self.annotationGraph.add((body,
+                                      RDF.value, 
+                                      Literal(self.annotations[(i,j)].text.replace("\n", " ").replace("\r", " ").replace("\r\n", " ").encode('utf-8'))
+                                      ))
+            self.annotationGraph.add((self.annotationNamespaces['scope'][self.source_cell_qname], 
+                                      self.annotationNamespaces['oa']['hasTarget'], 
+                                      self.namespaces['scope'][self.source_cell_qname]
+                                      ))
+            self.annotationGraph.add((self.annotationNamespaces['scope'][self.source_cell_qname], 
+                                      self.annotationNamespaces['oa']['annotator'], 
+                                      Literal(self.annotations[(i,j)].author.encode('utf-8'))
+                                      ))
+            self.annotationGraph.add((self.annotationNamespaces['scope'][self.source_cell_qname], 
+                                      self.annotationNamespaces['oa']['annotated'], 
+                                      Literal(datetime.datetime.fromtimestamp(os.path.getmtime(self.filename)).strftime("%Y-%m-%d"),datatype=self.annotationNamespaces['xsd']['date'])
+                                      ))
+            self.annotationGraph.add((self.annotationNamespaces['scope'][self.source_cell_qname], 
+                                      self.annotationNamespaces['oa']['generator'], 
+                                      URIRef("https://github.com/Data2Semantics/TabLinker")
+                                      ))
+            self.annotationGraph.add((self.annotationNamespaces['scope'][self.source_cell_qname], 
+                                      self.annotationNamespaces['oa']['generated'], 
+                                      Literal(datetime.datetime.now().strftime("%Y-%m-%d"), datatype=self.annotationNamespaces['xsd']['date'])
+                                      ))
+            self.annotationGraph.add((self.annotationNamespaces['scope'][self.source_cell_qname], 
+                                      self.annotationNamespaces['oa']['modelVersion'], 
+                                      URIRef("http://www.openannotation.org/spec/core/20120509.html")
+                                      ))
+        else:
+            # Create triples according to Nanopublications model
+            print "Nanopublications not implemented yet!"
+            
+
+        # If a population value is parseable in annotation's body, we issue a new triple for the corrected value and flag = 0
+        try:
+            self.graph.add((self.namespaces['scope'][self.source_cell_qname],
+                            self.namespaces['d2s']['correctedValue'],
+                            Literal(int(self.annotations[(i,j)].text.replace("\n", " ").replace("\r", " ").replace("\r\n", " ").encode('utf-8')))
+                            ))
+            self.graph.add((self.namespaces['scope'][self.source_cell_qname],
+                            self.namespaces['d2s']['hasFlag'],
+                            Literal(0)
+                            ))
+
+        except ValueError:
+            self.log.debug("Annotation does not contain a corrected value, skipping.")
+            pass
     
 
 
@@ -588,6 +682,7 @@ if __name__ == '__main__':
         logging.debug('Done linking')
 
         turtleFile = targetFolder + tLinker.fileBasename +'.ttl'
+        turtleFileAnnotations = targetFolder + tLinker.fileBasename +'_annotations.ttl'
         logging.info("Serializing graph to file {}".format(turtleFile))
         try :
             fileWrite = open(turtleFile, "w")
@@ -596,6 +691,14 @@ if __name__ == '__main__':
             turtle = tLinker.graph.serialize(None, format=config.get('general', 'format'))
             fileWrite.writelines(turtle)
             fileWrite.close()
+            
+            #Annotations
+            if tLinker.config.get('annotations', 'enabled') == "1":
+                logging.info("Serializing annotations to file {}".format(turtleFileAnnotations))
+                fileWriteAnnotations = open(turtleFileAnnotations, "w")
+                turtleAnnotations = tLinker.annotationGraph.serialize(None, format=config.get('general', 'format'))
+                fileWriteAnnotations.writelines(turtleAnnotations)
+                fileWriteAnnotations.close()
         except :
             logging.error("Whoops! Something went wrong in serializing to output file")
             logging.info(sys.exc_info())
