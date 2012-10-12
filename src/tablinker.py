@@ -620,23 +620,6 @@ class TabLinker(object):
             print "Nanopublications not implemented yet!"
             
 
-        # If a population value is parseable in annotation's body, we issue a new triple for the corrected value and flag = 0
-        try:
-            self.graph.add((self.namespaces['scope'][self.source_cell_qname],
-                            self.namespaces['d2s']['correctedValue'],
-                            Literal(int(self.annotations[(i,j)].text.replace("\n", " ").replace("\r", " ").replace("\r\n", " ").encode('utf-8')))
-                            ))
-            self.graph.add((self.namespaces['scope'][self.source_cell_qname],
-                            self.namespaces['d2s']['hasFlag'],
-                            Literal(0)
-                            ))
-
-        except ValueError:
-            self.log.debug("Annotation does not contain a corrected value, skipping.")
-            pass
-    
-
-
 
 if __name__ == '__main__':
     """
