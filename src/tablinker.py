@@ -1,6 +1,6 @@
 """
 Created on 19 Sep 2011
-Modified on 07 Sep 2012
+Modified on 12 Oct 2012
 
 Authors:    Rinke Hoekstra, Laurens Rietveld, Albert Meronyo-Penyuela
 Copyright:  VU University Amsterdam, 2011/2012
