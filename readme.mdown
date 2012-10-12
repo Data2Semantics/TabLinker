@@ -59,7 +59,7 @@ Editing the config.ini file can help you to get a more customized RDF output. Op
 * **labels** are language literals to be added for that property name (if needed).
 
 ### annotations
-* **enabled** with value 1 (default) generates an additional graph with the annotations of contained in the XLS files (if any) (0 disables it).
+* **enabled** with value 1 (default) generates an additional graph with the annotations (Excel comments) contained in the XLS files (if any) (0 disables it).
 * **model** specifies the data model ('oa' by default) for generating the annotations graph.
 
 ## Requirements
