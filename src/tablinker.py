@@ -666,6 +666,7 @@ if __name__ == '__main__':
 
         turtleFile = targetFolder + tLinker.fileBasename +'.ttl'
         turtleFileAnnotations = targetFolder + tLinker.fileBasename +'_annotations.ttl'
+        logging.info("Generated {} triples.".format(len(tLinker.graph)))
         logging.info("Serializing graph to file {}".format(turtleFile))
         try :
             fileWrite = open(turtleFile, "w")
@@ -677,6 +678,7 @@ if __name__ == '__main__':
             
             #Annotations
             if tLinker.config.get('annotations', 'enabled') == "1":
+                logging.info("Generated {} triples.".format(len(tLinker.annotationsGraph)))
                 logging.info("Serializing annotations to file {}".format(turtleFileAnnotations))
                 fileWriteAnnotations = open(turtleFileAnnotations, "w")
                 turtleAnnotations = tLinker.annotationGraph.serialize(None, format=config.get('general', 'format'))
