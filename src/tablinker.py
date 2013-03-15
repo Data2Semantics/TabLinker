@@ -678,7 +678,7 @@ if __name__ == '__main__':
             
             #Annotations
             if tLinker.config.get('annotations', 'enabled') == "1":
-                logging.info("Generated {} triples.".format(len(tLinker.annotationsGraph)))
+                logging.info("Generated {} triples.".format(len(tLinker.annotationGraph)))
                 logging.info("Serializing annotations to file {}".format(turtleFileAnnotations))
                 fileWriteAnnotations = open(turtleFileAnnotations, "w")
                 turtleAnnotations = tLinker.annotationGraph.serialize(None, format=config.get('general', 'format'))
