@@ -26,6 +26,7 @@ import datetime
 
 import sys
 reload(sys)
+import traceback
 sys.setdefaultencoding("latin-1") #@UndefinedVariable
 
 
@@ -351,7 +352,9 @@ class TabLinker(object):
                 if (self.cellType == 'HRowHeader') :
                     #Always update headerlist even if it doesn't contain data
                     self.updateRowHierarchy(i, j)
-                   
+                        
+                if self.cellType == 'Data' :
+                    self.parseData(i, j)
                 
                 if not self.isEmpty(i,j) :
                     self.graph.add((self.namespaces['scope'][self.source_cell_qname],RDF.type,self.namespaces['d2s'][self.cellType]))
@@ -376,9 +379,6 @@ class TabLinker(object):
                          
                     elif self.cellType == 'RowLabel' :
                         self.parseRowLabel(i, j)
-                        
-                    elif self.cellType == 'Data' :
-                        self.parseData(i, j)
         
         self.log.info("Done parsing...")
 
@@ -552,7 +552,11 @@ class TabLinker(object):
         self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['isObservation'], observation))
         self.graph.add((observation,RDF.type,self.namespaces['qb']['Observation']))
         self.graph.add((observation,self.namespaces['qb']['dataSet'],self.namespaces['scope'][self.sheet_qname]))
-        self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(self.source_cell.value)))
+        if self.isEmpty(i,j):
+            self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(0)))
+        else:
+            self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(self.source_cell.value)))
+
         
         # Use the row dimensions dictionary to find the properties that link data values to row headers
         try :
@@ -672,7 +676,7 @@ if __name__ == '__main__':
             fileWrite = open(turtleFile, "w")
             #Avoid rdflib writing the graph itself, as this is buggy in windows.
             #Instead, retrieve string and then write (probably more memory intensive...)
-            turtle = tLinker.graph.serialize(None, format=config.get('general', 'format'))
+            turtle = tLinker.graph.serialize(destination=None, format=config.get('general', 'format'))
             fileWrite.writelines(turtle)
             fileWrite.close()
             
@@ -687,6 +691,7 @@ if __name__ == '__main__':
         except :
             logging.error("Whoops! Something went wrong in serializing to output file")
             logging.info(sys.exc_info())
+            traceback.print_exc(file=sys.stdout)
             
         logging.info("Done")
     
