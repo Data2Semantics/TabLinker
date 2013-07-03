@@ -157,6 +157,45 @@ class TabLinker(object):
     ###
     #    Utility Functions
     ### 
+    
+    def insideMergeBox(self, i, j):
+        """
+        Check if the specified cell is inside a merge box
+
+        Arguments:
+        i -- row
+        j -- column
+
+        Returns:
+        True/False -- depending on whether the cell is inside a merge box
+        """
+        self.merged_cells = self.r_sheet.merged_cells
+        for crange in self.merged_cells:
+            rlo, rhi, clo, chi = crange
+            if i <=  rhi - 1 and i >= rlo and j <= chi - 1 and j >= clo:
+                return True
+        return False
+        
+
+    def getMergeBoxCoord(self, i, j):
+        """
+        Get the top-left corner cell of the merge box containing the specified cell
+
+        Arguments:
+        i -- row
+        j -- column
+
+        Returns:
+        (k, l) -- Coordinates of the top-left corner of the merge box
+        """
+        if not self.insideMergBox(i,j):
+            return (-1, -1)
+
+        self.merged_cells = self.r_sheet.merged_cells
+        for crange in self.merged_cells:
+            rlo, rhi, clo, chi = crange
+            if i <=  rhi - 1 and i >= rlo and j <= chi - 1 and j >= clo:
+                return (rlo, clo)            
          
     def getType(self, style):
         """Get type for a given excel style. Style name must be prefixed by 'TL '
@@ -355,6 +394,9 @@ class TabLinker(object):
                   
                 if self.cellType == 'Data':
                     self.parseData(i, j)
+                                           
+                if self.cellType == 'ColHeader' :
+                    self.parseColHeader(i, j)
                 
                 if not self.isEmpty(i,j) :
                     self.graph.add((self.namespaces['scope'][self.source_cell_qname],RDF.type,self.namespaces['d2s'][self.cellType]))
@@ -367,9 +409,6 @@ class TabLinker(object):
     
                     elif self.cellType == 'RowProperty' :
                         self.parseRowProperty(i, j)
-                                           
-                    elif self.cellType == 'ColHeader' :
-                        self.parseColHeader(i, j)
                        
                     elif self.cellType == 'RowHeader' :
                         self.parseRowHeader(i, j)
@@ -506,7 +545,13 @@ class TabLinker(object):
         """
         Create relevant triples for the cell marked as Header (i, j are row and column)
         """
-        self.source_cell_value_qname = self.addValue(self.source_cell.value)   
+        if self.isEmpty(i,j):
+            if self.insideMergeBox(i,j):
+                self.source_cell_value_qname = self.addValue(self.r_sheet.cell(self.getMergeBoxCoord(i,j)).value)
+            else:
+                return
+        else:
+            self.source_cell_value_qname = self.addValue(self.source_cell.value)   
         self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['isDimension'],self.namespaces['scope'][self.source_cell_value_qname]))
         self.graph.add((self.namespaces['scope'][self.source_cell_value_qname],RDF.type,self.namespaces['d2s']['Dimension']))
         self.graph.add((self.namespaces['scope'][self.source_cell_qname], RDF.type, self.namespaces['skos'].Concept))
