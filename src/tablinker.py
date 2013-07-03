@@ -552,7 +552,7 @@ class TabLinker(object):
         self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['isObservation'], observation))
         self.graph.add((observation,RDF.type,self.namespaces['qb']['Observation']))
         self.graph.add((observation,self.namespaces['qb']['dataSet'],self.namespaces['scope'][self.sheet_qname]))
-        if self.isEmpty(i,j):
+        if self.isEmpty(i,j) and self.config.get('dataCell', 'implicitZeros') == 1:
             self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(0)))
         else:
             self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(self.source_cell.value)))
