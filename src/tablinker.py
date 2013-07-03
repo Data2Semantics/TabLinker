@@ -547,7 +547,8 @@ class TabLinker(object):
         """
         if self.isEmpty(i,j):
             if self.insideMergeBox(i,j):
-                self.source_cell_value_qname = self.addValue(self.r_sheet.cell(self.getMergeBoxCoord(i,j)).value)
+                k, l = self.getMergeBoxCoord(i,j)
+                self.source_cell_value_qname = self.addValue(self.r_sheet.cell(k,l).value)
             else:
                 return
         else:
