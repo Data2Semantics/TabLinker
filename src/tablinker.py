@@ -352,8 +352,8 @@ class TabLinker(object):
                 if (self.cellType == 'HRowHeader') :
                     #Always update headerlist even if it doesn't contain data
                     self.updateRowHierarchy(i, j)
-                        
-                if self.cellType == 'Data' :
+                  
+                if self.cellType == 'Data':
                     self.parseData(i, j)
                 
                 if not self.isEmpty(i,j) :
@@ -546,13 +546,16 @@ class TabLinker(object):
         """
         Create relevant triples for the cell marked as Data (i, j are row and column)
         """
+        
+        if self.isEmpty(i,j) and self.config.get('dataCell', 'implicitZeros') == '0':
+            return
 
         observation = BNode()
         
         self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['isObservation'], observation))
         self.graph.add((observation,RDF.type,self.namespaces['qb']['Observation']))
         self.graph.add((observation,self.namespaces['qb']['dataSet'],self.namespaces['scope'][self.sheet_qname]))
-        if self.isEmpty(i,j) and self.config.get('dataCell', 'implicitZeros') == 1:
+        if self.isEmpty(i,j) and self.config.get('dataCell', 'implicitZeros') == '1':
             self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(0)))
         else:
             self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(self.source_cell.value)))
