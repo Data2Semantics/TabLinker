@@ -188,7 +188,7 @@ class TabLinker(object):
         Returns:
         (k, l) -- Coordinates of the top-left corner of the merge box
         """
-        if not self.insideMergBox(i,j):
+        if not self.insideMergeBox(i,j):
             return (-1, -1)
 
         self.merged_cells = self.r_sheet.merged_cells
