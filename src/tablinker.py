@@ -388,15 +388,15 @@ class TabLinker(object):
                     if (i,j) in self.annotations:
                         self.parseAnnotation(i, j)
 
+                # Parse even if empty
                 if (self.cellType == 'HRowHeader') :
-                    #Always update headerlist even if it doesn't contain data
                     self.updateRowHierarchy(i, j)
-                  
                 if self.cellType == 'Data':
                     self.parseData(i, j)
-                                           
                 if self.cellType == 'ColHeader' :
                     self.parseColHeader(i, j)
+                if self.cellType == 'RowProperty' :
+                    self.parseRowProperty(i, j)
                 
                 if not self.isEmpty(i,j) :
                     self.graph.add((self.namespaces['scope'][self.source_cell_qname],RDF.type,self.namespaces['d2s'][self.cellType]))
@@ -407,9 +407,6 @@ class TabLinker(object):
                     if self.cellType == 'Title' :
                         self.parseTitle(i, j)
     
-                    elif self.cellType == 'RowProperty' :
-                        self.parseRowProperty(i, j)
-                       
                     elif self.cellType == 'RowHeader' :
                         self.parseRowHeader(i, j)
                     
@@ -566,8 +563,14 @@ class TabLinker(object):
         """
         Create relevant triples for the cell marked as Property (i, j are row and column)
         """
-        self.source_cell_value_qname = self.addValue(self.source_cell.value)
-        
+        if self.isEmpty(i,j):
+            if self.insideMergeBox(i,j):
+                k, l = self.getMergeBoxCoord(i,j)
+                self.source_cell_value_qname = self.addValue(self.r_sheet.cell(k,l).value)
+            else:
+                return
+        else:
+            self.source_cell_value_qname = self.addValue(self.source_cell.value)   
         self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['isDimensionProperty'],self.namespaces['scope'][self.source_cell_value_qname]))
         self.graph.add((self.namespaces['scope'][self.source_cell_value_qname],RDF.type,self.namespaces['qb']['DimensionProperty']))
         self.graph.add((self.namespaces['scope'][self.source_cell_value_qname],RDF.type,RDF['Property']))
