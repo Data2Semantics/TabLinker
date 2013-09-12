@@ -68,7 +68,7 @@ TabLinker was developed under the following environment:
 
 * Python 2.7
 * The xlutils and xlrd packages from <http://www.python-excel.org/>
-* RDFLib, from <http://www.rdflib.net>
+* RDFLib 3.4.0, from <http://www.rdflib.net> (compatibility with 4.0.1 in progress)
 
 ## API Documentation
 
