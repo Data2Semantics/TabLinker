@@ -106,23 +106,23 @@ class TabLinker(object):
     
     def addDataCellProperty(self):
         """Add definition of data cell resource to graph"""
-        if len(config.get('dataCell', 'propertyName')) > 0 :
-            self.dataCellPropertyName = config.get('dataCell', 'propertyName')
+        if len(self.config.get('dataCell', 'propertyName')) > 0 :
+            self.dataCellPropertyName = self.config.get('dataCell', 'propertyName')
         else :
             self.dataCellPropertyName = 'hasValue'
         
         self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDF.type, self.namespaces['qb']['MeasureProperty']))
         
         #Take labels from config
-        if len(config.get('dataCell', 'labels')) > 0 :
-            labels = config.get('dataCell', 'labels').split(':::')
+        if len(self.config.get('dataCell', 'labels')) > 0 :
+            labels = self.config.get('dataCell', 'labels').split(':::')
             for label in labels :
                 labelProperties = label.split('-->')
                 if len(labelProperties[0]) > 0 and len(labelProperties[1]) > 0 :
                     self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDFS.label, Literal(labelProperties[1],labelProperties[0])))
                     
-        if len(config.get('dataCell', 'literalType')) > 0 :
-            self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDFS.range, Namespace(config.get('dataCell', 'literalType'))))
+        if len(self.config.get('dataCell', 'literalType')) > 0 :
+            self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDFS.range, Namespace(self.config.get('dataCell', 'literalType'))))
             
     def setScope(self, fileBasename):
         """Set the default namespace and base for all URIs of the current workbook"""
