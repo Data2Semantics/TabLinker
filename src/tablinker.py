@@ -29,7 +29,7 @@ import datetime
 import sys
 reload(sys)
 import traceback
-sys.setdefaultencoding("latin-1") #@UndefinedVariable
+sys.setdefaultencoding("utf8") #@UndefinedVariable
 
 
 class TabLinker(object):
