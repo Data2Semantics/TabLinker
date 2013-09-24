@@ -106,6 +106,7 @@ class TabLinker(object):
     
     def addDataCellProperty(self):
         """Add definition of data cell resource to graph"""
+
         if len(self.config.get('dataCell', 'propertyName')) > 0 :
             self.dataCellPropertyName = self.config.get('dataCell', 'propertyName')
         else :
@@ -122,7 +123,7 @@ class TabLinker(object):
                     self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDFS.label, Literal(labelProperties[1],labelProperties[0])))
                     
         if len(self.config.get('dataCell', 'literalType')) > 0 :
-            self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDFS.range, Namespace(self.config.get('dataCell', 'literalType'))))
+            self.graph.add((self.namespaces['d2s'][self.dataCellPropertyName], RDFS.range, URIRef(self.config.get('dataCell', 'literalType'))))
             
     def setScope(self, fileBasename):
         """Set the default namespace and base for all URIs of the current workbook"""
