@@ -1,6 +1,6 @@
 <img src='http://github.com/Data2Semantics/TabLinker/raw/master/img/tablinker-logo-150dpi.png'/>
 
-# TabLinker v0.1a
+# TabLinker v0.2a
 **Authors**: [Rinke Hoekstra](http://github.com/RinkeHoekstra), [Laurens Rietveld](http://github.com/LaurensRietveld), [Albert Meroño-Peñuela](http://github.com/albertmeronyo)
 
 **Copyright**: VU University Amsterdam
