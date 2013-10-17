@@ -1,16 +1,90 @@
-from bottle import route, run, template
+from bottle import route, run, template, request, static_file
 from tablinker import TabLinker
 import logging
 from ConfigParser import SafeConfigParser
 import glob
 import sys
 import traceback
+import os
 
 @route('/tablinker/version')
 def version():
     return "TabLinker version"
 
+
+@route('/tablinker')
 @route('/tablinker/')
+def tablinker():
+    return '''
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TabLinker</title>
+ 
+<link rel="stylesheet" href="css/main.css" type="text/css" />
+ 
+<!--[if IE]>
+    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+<!--[if lte IE 7]>
+    <script src="js/IE8.js" type="text/javascript"></script><![endif]-->
+<!--[if lt IE 7]>
+ 
+    <link rel="stylesheet" type="text/css" media="all" href="css/ie6.css"/><![endif]-->
+</head>
+ 
+<body id="index" class="home">
+<center>
+<h1>TabLinker</h1>
+<form action="http://lod.cedar-project.nl:8081/tablinker/upload" method="post" enctype="multipart/form-data">
+  Select a file: <input type="file" name="upload" />
+  <input type="submit" value="Start upload" />
+</form>
+</center>
+</body>
+</html>
+    '''
+
+@route('/tablinker/upload', method='POST')
+def upload():
+    # category = request.forms.get('category')
+    upload = request.files.get('upload')
+    name, ext = os.path.splitext(upload.filename)
+    if ext not in ('.xls'):
+        return 'File extension ' + ext  + ' not allowed.'
+
+    save_path = '../input/in.xls'
+    upload.save(save_path, overwrite = True) # appends upload.filename automatically
+    return '''
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TabLinker</title>
+ 
+<link rel="stylesheet" href="css/main.css" type="text/css" />
+ 
+<!--[if IE]>
+    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+<!--[if lte IE 7]>
+    <script src="js/IE8.js" type="text/javascript"></script><![endif]-->
+<!--[if lt IE 7]>
+ 
+    <link rel="stylesheet" type="text/css" media="all" href="css/ie6.css"/><![endif]-->
+</head>
+ 
+<body id="index" class="home">
+<center>
+<h1>TabLinker</h1>
+<form action="http://lod.cedar-project.nl:8081/tablinker/run" method="get">
+  Upload OK, click to convert
+  <input type="submit" value="Convert to RDF" />
+</form>
+</center>
+</body>
+</html>
+'''
+
 @route('/tablinker/run')
 def tablinker():
     logging.basicConfig(level=logging.INFO)
@@ -78,7 +152,39 @@ def tablinker():
             traceback.print_exc(file=sys.stdout)
             
         logging.info("Done")
-    print "Done!"
+    return '''
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TabLinker</title>
+ 
+<link rel="stylesheet" href="css/main.css" type="text/css" />
+ 
+<!--[if IE]>
+    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+<!--[if lte IE 7]>
+    <script src="js/IE8.js" type="text/javascript"></script><![endif]-->
+<!--[if lt IE 7]>
+ 
+    <link rel="stylesheet" type="text/css" media="all" href="css/ie6.css"/><![endif]-->
+</head>
+ 
+<body id="index" class="home">
+<center>
+<h1>TabLinker</h1>
+<form action="http://lod.cedar-project.nl:8081/tablinker/download" method="get">
+  TabLinkger generated ''' + str(len(tLinker.graph)) + ''' triples successfully. Click to download
+  <input type="submit" value="Download TTL" />
+</form>
+</center>
+</body>
+</html>
+'''
+
+@route('/tablinker/download')
+def download():
+    return static_file('in.ttl', root = '../output/', download = 'tablinker.ttl')
 
 
 run(host = 'lod.cedar-project.nl', port = 8081, debug = True)
