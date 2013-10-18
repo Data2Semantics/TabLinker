@@ -15,35 +15,7 @@ def version():
 @route('/tablinker')
 @route('/tablinker/')
 def tablinker():
-    return '''
-    <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>TabLinker</title>
- 
-<link rel="stylesheet" href="css/main.css" type="text/css" />
- 
-<!--[if IE]>
-    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-<!--[if lte IE 7]>
-    <script src="js/IE8.js" type="text/javascript"></script><![endif]-->
-<!--[if lt IE 7]>
- 
-    <link rel="stylesheet" type="text/css" media="all" href="css/ie6.css"/><![endif]-->
-</head>
- 
-<body id="index" class="home">
-<center>
-<h1>TabLinker</h1>
-<form action="http://lod.cedar-project.nl:8081/tablinker/upload" method="post" enctype="multipart/form-data">
-  Select a file: <input type="file" name="upload" />
-  <input type="submit" value="Start upload" />
-</form>
-</center>
-</body>
-</html>
-    '''
+    return template('tl-service', state='start')
 
 @route('/tablinker/upload', method='POST')
 def upload():
@@ -55,35 +27,7 @@ def upload():
 
     save_path = '../input/in.xls'
     upload.save(save_path, overwrite = True) # appends upload.filename automatically
-    return '''
-    <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>TabLinker</title>
- 
-<link rel="stylesheet" href="css/main.css" type="text/css" />
- 
-<!--[if IE]>
-    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-<!--[if lte IE 7]>
-    <script src="js/IE8.js" type="text/javascript"></script><![endif]-->
-<!--[if lt IE 7]>
- 
-    <link rel="stylesheet" type="text/css" media="all" href="css/ie6.css"/><![endif]-->
-</head>
- 
-<body id="index" class="home">
-<center>
-<h1>TabLinker</h1>
-<form action="http://lod.cedar-project.nl:8081/tablinker/run" method="get">
-  Upload OK, click to convert
-  <input type="submit" value="Convert to RDF" />
-</form>
-</center>
-</body>
-</html>
-'''
+    return template('tl-service', state='uploaded')
 
 @route('/tablinker/run')
 def tablinker():
@@ -152,35 +96,7 @@ def tablinker():
             traceback.print_exc(file=sys.stdout)
             
         logging.info("Done")
-    return '''
-    <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>TabLinker</title>
- 
-<link rel="stylesheet" href="css/main.css" type="text/css" />
- 
-<!--[if IE]>
-    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-<!--[if lte IE 7]>
-    <script src="js/IE8.js" type="text/javascript"></script><![endif]-->
-<!--[if lt IE 7]>
- 
-    <link rel="stylesheet" type="text/css" media="all" href="css/ie6.css"/><![endif]-->
-</head>
- 
-<body id="index" class="home">
-<center>
-<h1>TabLinker</h1>
-<form action="http://lod.cedar-project.nl:8081/tablinker/download" method="get">
-  TabLinkger generated ''' + str(len(tLinker.graph)) + ''' triples successfully. Click to download
-  <input type="submit" value="Download TTL" />
-</form>
-</center>
-</body>
-</html>
-'''
+    return template('tl-service', state='converted', numtriples=str(len(tLinker.graph)))
 
 @route('/tablinker/download')
 def download():
