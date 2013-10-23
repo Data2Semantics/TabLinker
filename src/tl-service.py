@@ -102,6 +102,23 @@ def tablinker():
 def download():
     return static_file('in.ttl', root = '../output/', download = 'tablinker.ttl')
 
+# Static Routes
+@route('/js/<filename:re:.*\.js>')
+def javascripts(filename):
+    return static_file(filename, root='views/js')
 
-run(host = 'lod.cedar-project.nl', port = 8081, debug = True)
+@route('/css/<filename:re:.*\.css>')
+def stylesheets(filename):
+    return static_file(filename, root='views/css')
+
+@route('/img/<filename:re:.*\.(jpg|png|gif|ico)>')
+def images(filename):
+    return static_file(filename, root='views/img')
+
+@route('/fonts/<filename:re:.*\.(eot|ttf|woff|svg)>')
+def fonts(filename):
+    return static_file(filename, root='views/fonts')
+
+
+run(host = 'localhost', port = 8081, debug = True)
 
