@@ -56,11 +56,6 @@ def tablinker():
     files = glob.glob(srcMask)
     logging.info("Found {0} files to convert.".format(len(files)))
     
-    if len(files) == 0 :
-        logging.error("No files found. Are you sure the path to the annotated XLS files is correct?")
-        logging.info("Path searched: " + srcMask)
-        quit()
-    
     for filename in files :
         logging.info('Starting TabLinker for {0}'.format(filename))
         
