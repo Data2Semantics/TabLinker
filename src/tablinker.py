@@ -33,12 +33,12 @@ sys.setdefaultencoding("utf8") #@UndefinedVariable
 
 
 class TabLinker(object):
-    defaultNamespacePrefix = 'http://www.data2semantics.org/data/'
-    annotationsNamespacePrefix = 'http://www.data2semantics.org/annotations/'
+    defaultNamespacePrefix = 'http://lod.cedar-project.nl/resource/'
+    annotationsNamespacePrefix = 'http://lod.cedar-project.nl/annotations/'
     namespaces = {
       'dcterms':Namespace('http://purl.org/dc/terms/'), 
       'skos':Namespace('http://www.w3.org/2004/02/skos/core#'), 
-      'd2s':Namespace('http://www.data2semantics.org/core/'), 
+      'd2s':Namespace('http://lod.cedar-project.nl/core/'), 
       'qb':Namespace('http://purl.org/linked-data/cube#'), 
       'owl':Namespace('http://www.w3.org/2002/07/owl#')
     }
@@ -68,7 +68,7 @@ class TabLinker(object):
         
         self.log.debug('Setting Scope')
         basename = os.path.basename(filename)
-        basename = re.search('(.*)\.xls',basename).group(1)
+        basename = re.search('(.*)\_marked\.xls',basename).group(1)
         self.setScope(basename)
         
         self.log.debug('Loading Excel file {0}.'.format(filename))
