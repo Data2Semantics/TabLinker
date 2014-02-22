@@ -387,6 +387,13 @@ class TabLinker(object):
                 
                 self.log.debug("({},{}) {}/{}: \"{}\"". format(i,j,self.cellType, self.source_cell_name, self.source_cell.value))
 
+                # Try to parse ints to avoid ugly _0 URIs
+                try:
+                    if int(self.source_cell.value) == self.source_cell.value:
+                        self.source_cell.value = int(self.source_cell.value)
+                except ValueError:
+                    self.log.debug("(%s.%s) No parseable int" % (i,j))
+
                 # Parse annotation (if any)
                 if self.config.get('annotations', 'enabled') == "1":
                     if (i,j) in self.annotations:
@@ -522,7 +529,7 @@ class TabLinker(object):
         rowHeaderValue = ""
 
         # Don't attach the cell value to the namespace if it's already a URI
-        isURI = urlparse(self.source_cell.value)
+        isURI = urlparse(str(self.source_cell.value))
         if isURI.scheme and isURI.netloc:
             rowHeaderValue = URIRef(self.source_cell.value)
         else:
@@ -532,10 +539,10 @@ class TabLinker(object):
         self.graph.add((self.namespaces['scope'][self.source_cell_qname],
                         self.namespaces['d2s']['isDimension'], 
                         rowHeaderValue))
-        self.graph.add((self.namespaces['scope'][self.source_cell_value_qname],
+        self.graph.add((rowHeaderValue,
                         RDF.type,
                         self.namespaces['d2s']['Dimension']))
-        self.graph.add((self.namespaces['scope'][self.source_cell_qname], 
+        self.graph.add((rowHeaderValue, 
                         RDF.type, 
                         self.namespaces['skos'].Concept))
         
@@ -546,12 +553,14 @@ class TabLinker(object):
                 properties.append(dim_qname)
         except KeyError :
             self.log.debug("({}.{}) No properties for cell".format(i,j))
-        self.row_dimensions.setdefault(i,[]).append((self.source_cell_value_qname, properties))
+        self.row_dimensions.setdefault(i,[]).append((rowHeaderValue, properties))
         
         # Use the column dimensions dictionary to find the objects of the d2s:dimension property
         try :
             for dim_qname in self.column_dimensions[j] :
-                self.graph.add((self.namespaces['scope'][self.source_cell_value_qname],self.namespaces['d2s']['dimension'],self.namespaces['scope'][dim_qname]))
+                self.graph.add((rowHeaderValue,
+                                self.namespaces['d2s']['dimension'],
+                                self.namespaces['scope'][dim_qname]))
         except KeyError :
             self.log.debug("({}.{}) No column dimension for cell".format(i,j))
         
@@ -568,12 +577,6 @@ class TabLinker(object):
             else:
                 return
         else:            
-            try:
-                # Try to parse int to avoid ugly _0 URIs
-                if int(self.source_cell.value) == self.source_cell.value:
-                    self.source_cell.value = int(self.source_cell.value)
-            except ValueError:
-                self.log.debug("(%s.%s) No parseable int" % (i,j))
             self.source_cell_value_qname = self.addValue(self.source_cell.value)   
 
         self.graph.add((self.namespaces['scope'][self.source_cell_qname],
@@ -633,27 +636,41 @@ class TabLinker(object):
 
         observation = BNode()
         
-        self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['isObservation'], observation))
-        self.graph.add((observation,RDF.type,self.namespaces['qb']['Observation']))
-        self.graph.add((observation,self.namespaces['qb']['dataSet'],self.namespaces['scope'][self.sheet_qname]))
+        self.graph.add((self.namespaces['scope'][self.source_cell_qname],
+                        self.namespaces['d2s']['isObservation'], 
+                        observation))
+        self.graph.add((observation,
+                        RDF.type,
+                        self.namespaces['qb']['Observation']))
+        self.graph.add((observation,
+                        self.namespaces['qb']['dataSet'],
+                        self.namespaces['scope'][self.sheet_qname]))
         if self.isEmpty(i,j) and self.config.get('dataCell', 'implicitZeros') == '1':
-            self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(0)))
+            self.graph.add((observation,
+                            self.namespaces['d2s'][self.dataCellPropertyName],
+                            Literal(0)))
         else:
-            self.graph.add((observation,self.namespaces['d2s'][self.dataCellPropertyName],Literal(self.source_cell.value)))
-
+            self.graph.add((observation,
+                            self.namespaces['d2s'][self.dataCellPropertyName],
+                            Literal(self.source_cell.value)))
         
         # Use the row dimensions dictionary to find the properties that link data values to row headers
         try :
             for (dim_qname, properties) in self.row_dimensions[i] :
                 for p in properties:
-                    self.graph.add((observation,self.namespaces['d2s'][p],self.namespaces['scope'][dim_qname]))
+                    print dim_qname
+                    self.graph.add((observation,
+                                    self.namespaces['d2s'][p],
+                                    dim_qname))
         except KeyError :
             self.log.debug("({}.{}) No row dimension for cell".format(i,j))
         
         # Use the column dimensions dictionary to find the objects of the d2s:dimension property
         try :
             for dim_qname in self.column_dimensions[j] :
-                self.graph.add((observation,self.namespaces['d2s']['dimension'],self.namespaces['scope'][dim_qname]))
+                self.graph.add((observation,
+                                self.namespaces['d2s']['dimension'],
+                                self.namespaces['scope'][dim_qname]))
         except KeyError :
             self.log.debug("({}.{}) No column dimension for cell".format(i,j))
 
