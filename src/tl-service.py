@@ -6,16 +6,24 @@ import glob
 import sys
 import traceback
 import os
+from os import listdir
+from os.path import isfile, join
+
+fileList = []
+
 
 @route('/tablinker/version')
 def version():
     return "TabLinker version"
 
-
 @route('/tablinker')
 @route('/tablinker/')
 def tablinker():
-    return template('tl-service', state='start')
+    inPath = "../input/"
+    outPath = "../output/"
+    inFiles = [ f for f in listdir(inPath) if isfile(join(inPath,f)) ]
+    outFiles = [ f for f in listdir(outPath) if isfile(join(outPath,f)) ]
+    return template('tl-service', state='start', inFiles=inFiles, outFiles=outFiles)
 
 @route('/tablinker/upload', method='POST')
 def upload():
@@ -25,7 +33,8 @@ def upload():
     if ext not in ('.xls'):
         return 'File extension ' + ext  + ' not allowed.'
 
-    save_path = '../input/in.xls'
+    save_path = '../input/' + upload.filename
+    fileList.append(upload.filename)
     upload.save(save_path, overwrite = True) # appends upload.filename automatically
     return template('tl-service', state='uploaded')
 
@@ -95,7 +104,8 @@ def tablinker():
 
 @route('/tablinker/download')
 def download():
-    return static_file('in.ttl', root = '../output/', download = 'tablinker.ttl')
+    fileDownload = fileList[-1].split('.')[0] + '.ttl'
+    return static_file(fileDownload, root = '../output/', download = fileDownload)
 
 # Static Routes
 @route('/js/<filename:re:.*\.js>')
@@ -115,5 +125,5 @@ def fonts(filename):
     return static_file(filename, root='views/fonts')
 
 
-run(host = 'localhost', port = 8081, debug = True)
+run(host = 'lod.cedar-project.nl', port = 8081, debug = True)
 

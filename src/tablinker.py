@@ -69,7 +69,7 @@ class TabLinker(object):
         
         self.log.debug('Setting Scope')
         basename = os.path.basename(filename)
-        basename = re.search('(.*)\_marked\.xls',basename).group(1)
+        basename = re.search('(.*)\.xls',basename).group(1)
         self.setScope(basename)
         
         self.log.debug('Loading Excel file {0}.'.format(filename))

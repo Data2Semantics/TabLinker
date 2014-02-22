@@ -47,24 +47,49 @@
       <div class="starter-template">
 
 	<img src="/img/tablinker-logo-150dpi.png">
-	<p>foobar foo bar baz</p>
+	<p>Supervised Excel/CSV to RDF Converter <a href="http://www.data2semantics.org" target="_blank">http://www.data2semantics.org</a></p>
+	<hr>
 
 	%if state == 'start':
 	<form action="/tablinker/upload" method="post" enctype="multipart/form-data">
-	  Select a file: <input type="file" name="upload" />
-	  <input type="submit" value="Start upload" />
+	  <div class="form-group">
+	    <label for="exampleInputFile">File input</label>
+	    <center><input type="file" id="exampleInputFile" name="upload"></center>
+	    <p class="help-block">Select a CSV/Excel file previously marked-up from your disk.</p>
+	  </div>
+	  <input type="submit" class="btn btn-primary" value="Start upload" />
 	</form>
+
+	<div><hr></div>
+
+	<table class="table table-hover">
+	  <tr><td><b>Input files</b></td></tr>
+	  %for file in inFiles:
+	  <tr>
+	    <td>{{file}}</td>
+	  </tr>
+	  %end
+	</table>
+	<table class="table table-hover">
+	  <tr><td><b>Output files</b></td></tr>
+	  %for file in outFiles:
+	  <tr>
+	    <td>{{file}}</td>
+	  </tr>
+	  %end
+	</table>
 
 	%elif state == 'uploaded':
 	<form action="/tablinker/run" method="get">
 	  <p>Upload OK</p>
-	  <input type="submit" value="Convert to RDF" />
+	  <input type="submit" class="btn btn-primary" value="Convert to RDF" />
 	</form>
 
 	%else:
 	<form action="/tablinker/download" method="get">
-	  <p>TabLinkger generated {{numtriples}} triples successfully</p>
-	  <input type="submit" value="Download TTL" />
+	  <p>TabLinker generated {{numtriples}} triples successfully</p>
+	  <input type="submit" class="btn btn-primary" value="Download TTL" />
+	  <a href="/tablinker/"><input type="button" class="btn btn-primary" value="Start again" /></a>
 	</form>
 	%end
     
