@@ -567,11 +567,24 @@ class TabLinker(object):
                 self.source_cell_value_qname = self.addValue(self.r_sheet.cell(k,l).value)
             else:
                 return
-        else:
+        else:            
+            try:
+                # Try to parse int to avoid ugly _0 URIs
+                if int(self.source_cell.value) == self.source_cell.value:
+                    self.source_cell.value = int(self.source_cell.value)
+            except ValueError:
+                self.log.debug("(%s.%s) No parseable int" % (i,j))
             self.source_cell_value_qname = self.addValue(self.source_cell.value)   
-        self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['isDimension'],self.namespaces['scope'][self.source_cell_value_qname]))
-        self.graph.add((self.namespaces['scope'][self.source_cell_value_qname],RDF.type,self.namespaces['d2s']['Dimension']))
-        self.graph.add((self.namespaces['scope'][self.source_cell_qname], RDF.type, self.namespaces['skos'].Concept))
+
+        self.graph.add((self.namespaces['scope'][self.source_cell_qname],
+                        self.namespaces['d2s']['isDimension'],
+                        self.namespaces['scope'][self.source_cell_value_qname]))
+        self.graph.add((self.namespaces['scope'][self.source_cell_value_qname],
+                        RDF.type,
+                        self.namespaces['d2s']['Dimension']))
+        self.graph.add((self.namespaces['scope'][self.source_cell_qname], 
+                        RDF.type, 
+                        self.namespaces['skos'].Concept))
         
         # Add the value qname to the column_dimensions list for that column
         self.column_dimensions.setdefault(j,[]).append(self.source_cell_value_qname)
