@@ -2,10 +2,10 @@
 
 """
 Created on 19 Sep 2011
-Modified on 2 Oct 2013
+Modified on 22 Feb 2014
 
 Authors:    Rinke Hoekstra, Laurens Rietveld, Albert Meronyo-Penyuela
-Copyright:  VU University Amsterdam, 2011, 2012, 2013
+Copyright:  VU University Amsterdam, 2011, 2012, 2013, 2014
 License:    LGPLv3
 
 """
@@ -18,6 +18,7 @@ from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, BNode, URIRe
 import re
 from ConfigParser import SafeConfigParser
 import urllib
+from urlparse import urlparse
 import logging
 import os
 import time
@@ -518,10 +519,25 @@ class TabLinker(object):
         """
         Create relevant triples for the cell marked as RowHeader (i, j are row and column)
         """
-        self.source_cell_value_qname = self.addValue(self.source_cell.value)
-        self.graph.add((self.namespaces['scope'][self.source_cell_qname],self.namespaces['d2s']['isDimension'],self.namespaces['scope'][self.source_cell_value_qname]))
-        self.graph.add((self.namespaces['scope'][self.source_cell_value_qname],RDF.type,self.namespaces['d2s']['Dimension']))
-        self.graph.add((self.namespaces['scope'][self.source_cell_qname], RDF.type, self.namespaces['skos'].Concept))
+        rowHeaderValue = ""
+
+        # Don't attach the cell value to the namespace if it's already a URI
+        isURI = urlparse(self.source_cell.value)
+        if isURI.scheme and isURI.netloc:
+            rowHeaderValue = URIRef(self.source_cell.value)
+        else:
+            self.source_cell_value_qname = self.addValue(self.source_cell.value)
+            rowHeaderValue = self.namespaces['scope'][self.source_cell_value_qname]
+
+        self.graph.add((self.namespaces['scope'][self.source_cell_qname],
+                        self.namespaces['d2s']['isDimension'], 
+                        rowHeaderValue))
+        self.graph.add((self.namespaces['scope'][self.source_cell_value_qname],
+                        RDF.type,
+                        self.namespaces['d2s']['Dimension']))
+        self.graph.add((self.namespaces['scope'][self.source_cell_qname], 
+                        RDF.type, 
+                        self.namespaces['skos'].Concept))
         
         # Get the properties to use for the row headers
         try :
