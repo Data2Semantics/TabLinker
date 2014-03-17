@@ -14,7 +14,7 @@ from xlutils.copy import copy
 from xlutils.styles import Styles
 from xlrd import open_workbook, XL_CELL_EMPTY, XL_CELL_BLANK, cellname, colname
 import glob
-from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, BNode, URIRef
+from rdflib import ConjunctiveGraph, Namespace, Literal, RDF, RDFS, XSD, BNode, URIRef
 import re
 from ConfigParser import SafeConfigParser
 import urllib
@@ -23,6 +23,7 @@ import logging
 import os
 import time
 import datetime
+import isodate
 #set default encoding to latin-1, to avoid encode/decode errors for special chars
 #(laurens: actually don't know why encoding/decoding is not sufficient)
 #(rinke: this is a specific requirment for the xlrd and xlutils packages)
@@ -347,7 +348,14 @@ class TabLinker(object):
                 # If altLabel has a value (typically for HierarchicalRowHeaders) different from the last element in the row hierarchy, we add it as alternative label. 
                 self.graph.add((self.namespaces['scope'][source_cell_value_qname],self.namespaces['skos'].altLabel,Literal(altLabel,'nl')))
         else :
-            self.graph.add((self.namespaces['scope'][source_cell_value_qname],self.namespaces['skos'].prefLabel,Literal(source_cell_value,'nl')))
+            # Try to parse a date to add the appropriate datatype to the literal
+            try: 
+                isodate.parse_datetime(source_cell_value)
+                self.log.debug("Datetime on this cell: %s" % source_cell_value)
+                self.graph.add((self.namespaces['scope'][source_cell_value_qname],self.namespaces['skos'].prefLabel,Literal(source_cell_value,datatype=XSD.datetime)))
+            except (ValueError, isodate.isoerror.ISO8601Error, AttributeError):
+                self.log.debug("No datetime on this cell")
+                self.graph.add((self.namespaces['scope'][source_cell_value_qname],self.namespaces['skos'].prefLabel,Literal(source_cell_value,'nl')))
             
             if altLabel and altLabel != source_cell_value:
                 # If altLabel has a value (typically for HierarchicalRowHeaders) different from the source_cell_value, we add it as alternative label. 
@@ -658,7 +666,6 @@ class TabLinker(object):
         try :
             for (dim_qname, properties) in self.row_dimensions[i] :
                 for p in properties:
-                    print dim_qname
                     self.graph.add((observation,
                                     self.namespaces['d2s'][p],
                                     dim_qname))
